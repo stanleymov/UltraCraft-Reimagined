@@ -1,0 +1,9 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.ultracraft.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "UltraCraft-refmap.json",
+  "client": ["IrisHandRendererMixin", "EmbeddiumLightMixin", "EmbeddiumTintMixin"],
+  "injectors": { "defaultRequire": 0 }
+}

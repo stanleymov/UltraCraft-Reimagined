@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=north,half=upper": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=south,half=lower": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=south,half=upper": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=east,half=lower": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=east,half=upper": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=west,half=lower": {
+      "model": "ultracraft:block/terminal"
+    },
+    "facing=west,half=upper": {
+      "model": "ultracraft:block/terminal"
+    }
+  }
+}

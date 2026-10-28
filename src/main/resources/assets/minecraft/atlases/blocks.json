@@ -1,0 +1,140 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/singlerevolver"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/fisticon"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/shotgun1"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/shotgun"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/shotgunsaw"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/nailgun2"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/nailgunoverheat"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/nailgunzapper"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/railcannon"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/railcannonscrew"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/railcannonmalicious"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/rocketlauncher"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/rocketlaunchercannon"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/rocketlaunchergasoline"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/revolveraltsingle"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/revolveraltspecial"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/revolveraltsharp"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/hammer"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/hammerpump"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/hammersaw"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/sawbladelauncher"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/sawbladelauncheroverheat"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/sawbladelauncherzapper"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/singlerevolver_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/revolveraltsingle_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/shotgun_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/hammer_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/nailgun2_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/sawbladelauncher_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/railcannon_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/rocketlauncher_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/shotgun1_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/hammerpump_sq"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/grapple_orb_icon"
+    }
+  ]
+}

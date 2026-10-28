@@ -1,0 +1,5 @@
+{
+  "providers": [
+    {"type": "ttf", "file": "ultracraft:fs_tahoma_8px.ttf", "size": 39.0, "oversample": 2.0, "shift": [0.0, 0.0], "skip": ""}
+  ]
+}

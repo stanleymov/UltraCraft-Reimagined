@@ -1,0 +1,22 @@
+.gradle/
+build/
+run/
+*.iml
+.idea/
+devmods/
+release/
+github/
+shots/
+run-client.log
+
+# Everything derived from the player's ULTRAKILL install: ripped assets, decompiled
+# code, converted textures/sounds. Never committed; the setup rebuilds it.
+work/
+tools/re/out/
+src/main/resources/assets/ultracraft/textures/uk/
+src/main/resources/assets/ultracraft/sounds/uk/
+src/main/resources/assets/ultracraft/models/uk/
+src/main/resources/assets/ultracraft/uk/
+src/main/resources/assets/ultracraft/sounds.json
+src/main/resources/assets/ultracraft/font/*.ttf
+build-check/

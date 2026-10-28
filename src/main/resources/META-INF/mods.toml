@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "All rights reserved (code); no ULTRAKILL assets included"
+
+[[mods]]
+modId = "ultracraft"
+version = "${version}"
+displayName = "UltraCraft"
+authors = "StanleyMOV"
+description = '''
+Play as V1 in Minecraft: ULTRAKILL's movement, arms, weapons and style system.
+ULTRAKILL's own models, textures, sounds and animations are built into this jar by the UltraCraft setup, from your
+own copy of the game. The jar is for you only: please don't share it.
+'''
+
+[[dependencies.ultracraft]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.ultracraft]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,1.20.2)"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,51 @@
+plugins {
+    id 'dev.architectury.loom' version '1.10-SNAPSHOT'
+}
+
+version = project.mod_version
+group = project.maven_group
+base { archivesName = project.archives_base_name }
+
+loom {
+    forge {
+        mixinConfig "ultracraft.mixins.json"
+        mixinConfig "ultracraft.client.mixins.json"
+        mixinConfig "ultracraft.oculus.mixins.json"
+    }
+    runs {
+        client {
+            programArgs "--quickPlaySingleplayer", "New World", "--width", "2560", "--height", "1440"
+        }
+    }
+}
+
+repositories {
+    maven { url "https://maven.minecraftforge.net/" }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    forge "net.minecraftforge:forge:${project.forge_version}"
+    // Dev-only: run with the player's Embeddium + Oculus (not shipped, not a dependency).
+    // Off by default: Embeddium 0.3.31's ForgeGuiMixin fails to apply in this dev runtime (2026-10-16);
+    // turn on with -PdevShaders=true when working on the retro-look / shader-pack compatibility.
+    if (project.hasProperty("devShaders")) {
+        modLocalRuntime files("devmods/embeddium-0.3.31+mc1.20.1.jar", "devmods/oculus-mc1.20.1-1.8.0.jar")
+        localRuntime files("devmods/jcpp-1.4.14.jar") // bundled inside Oculus; the dev run doesn't unpack it
+        forgeRuntimeLibrary files("devmods/jcpp-1.4.14.jar")
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("META-INF/mods.toml") { expand "version": project.version }
+}
+
+tasks.withType(JavaCompile).configureEach { it.options.release = 17 }
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
