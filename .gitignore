@@ -20,3 +20,4 @@ src/main/resources/assets/ultracraft/uk/
 src/main/resources/assets/ultracraft/sounds.json
 src/main/resources/assets/ultracraft/font/*.ttf
 build-check/
+installer/launcher/target/

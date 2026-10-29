@@ -306,8 +306,9 @@ public class CoinEntity extends Entity {
 					return;
 				}
 				Vec3d end = from.add(dir.multiply(range));
-				BlockHitResult block = world.raycast(new RaycastContext(from, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+				BlockHitResult block = world.raycast(com.ultracraft.weapon.Plants.ctx(from, end, this));
 				if (block.getType() != HitResult.Type.MISS) end = block.getPos();
+				com.ultracraft.weapon.Plants.shoot(world, shooter, from, end);
 				Net.toNear(world, from, new BeamPayload(3, -1, start, end));
 			}
 		}
@@ -345,7 +346,7 @@ public class CoinEntity extends Entity {
 	}
 
 	private boolean canSee(ServerWorld world, Vec3d from, Vec3d to) {
-		return world.raycast(new RaycastContext(from, to, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)).getType() == HitResult.Type.MISS;
+		return world.raycast(com.ultracraft.weapon.Plants.ctx(from, to, this)).getType() == HitResult.Type.MISS;
 	}
 
 	/** Called by {@link Hitscan} when a beam sweep passes through this coin. */

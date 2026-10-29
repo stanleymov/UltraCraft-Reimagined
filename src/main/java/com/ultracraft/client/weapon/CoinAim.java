@@ -64,7 +64,7 @@ public final class CoinAim {
 		Vec3d d = dir.normalize();
 		double range = Damage.rangeBlocks();
 		Vec3d end = origin.add(d.multiply(range));
-		var block = mc.world.raycast(new RaycastContext(origin, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+		var block = mc.world.raycast(com.ultracraft.weapon.Plants.ctx(origin, end, p));
 		double maxAlong = block.getType() == HitResult.Type.MISS ? range : block.getPos().distanceTo(origin);
 		double r = beamRadiusUnits * s + Hitscan.coinTriggerBlocks();
 		CoinEntity best = null;

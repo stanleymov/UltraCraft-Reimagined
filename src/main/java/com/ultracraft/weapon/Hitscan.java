@@ -132,7 +132,7 @@ public final class Hitscan {
 		Vec3d beamStart = start;
 		for (int segment = 0; segment <= bounces; segment++) {
 			Vec3d end = start.add(d.multiply(range));
-			BlockHitResult block = world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, shooter));
+			BlockHitResult block = world.raycast(Plants.ctx(start, end, shooter));
 			if (block.getType() != HitResult.Type.MISS) end = block.getPos();
 			double radius = beam.radiusUnits() * Damage.SCALE_BLOCKS;
 			// End crystals the beam passes through go off (they are not living: the search below skips them)
@@ -243,8 +243,16 @@ public final class Hitscan {
 			for (com.ultracraft.entity.UKProjectileEntity m : world.getEntitiesByClass(com.ultracraft.entity.UKProjectileEntity.class, new Box(start, end).expand(radius + 3),
 					e -> e.kind() == com.ultracraft.entity.ProjectileKind.MAGNET && e.isAlive()))
 				if (m.spikeCrossedBy(segA, segB, radius)) m.breakMagnet(world);
+			// the plants on the beam, up to where it stopped (Plants: it went on through them)
+			List<net.minecraft.util.math.BlockPos> burnt = Plants.shoot(world, shooter, start, end);
+			// the Malicious railcannon sets them and where it lands on fire (BlockFire; user)
+			if (beam == RAILCANNON_MALICIOUS)
+				BlockFire.malicious(world, shooter, burnt, block.getType() != HitResult.Type.MISS && end.equals(block.getPos()) ? block : null);
 			boolean off = Net.offhand(shooter);
-			Net.toNear(world, start, new BeamPayload(beam.kind(), shooter.getId(), beamStart.equals(start) && fromGun ? muzzle(shooter, origin, off) : start, end, off));
+			// (only the shot out of the gun is the shooter's: the client draws that one from the barrel; a ricochet's
+			// segment starts where it bounced - user: all three Sharpshooter lines came from V1)
+			boolean fromBarrel = beamStart.equals(start) && fromGun;
+			Net.toNear(world, start, new BeamPayload(beam.kind(), fromBarrel ? shooter.getId() : -1, fromBarrel ? muzzle(shooter, origin, off) : start, end, off));
 			lastEnd = end;
 			boolean stoppedByBody = bodiesPierced >= beam.hitAmount();
 			if (block.getType() == HitResult.Type.MISS || bounces == segment || stoppedByBody) {

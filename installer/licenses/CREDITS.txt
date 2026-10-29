@@ -1,0 +1,20 @@
+UltraCraft Reimagined - credits
+
+UltraCraft Reimagined is an unofficial fan mod by StanleyMOV, made with the help of Claude (Anthropic's AI). It is not
+made, supported or endorsed by New Blood Interactive, Arsi "Hakita" Patala or Mojang. It is not related to the other
+Minecraft mods called UltraCraft.
+
+ULTRAKILL (c) New Blood Interactive / Arsi "Hakita" Patala. None of its files are in this download: the setup builds
+the mod's models, textures, animations, fonts and sounds from the copy of ULTRAKILL installed on your own PC. The jar it
+builds is for you only - please don't share it.
+
+Minecraft (c) Mojang Studios / Microsoft. Minecraft Forge (c) the Forge team.
+
+Tools used by the setup (licences in this folder):
+- Python 3.12 (PSF licence) with tkinter (Tcl/Tk licence)
+- UnityPy, TypeTreeGeneratorAPI, fmod_toolkit (its Python code only), texture2ddecoder, etcpak, astc-encoder-py and
+  tpk_ar by K0lb3 and contributors - MIT
+- pyfmodex - MIT; Pillow - MIT-CMU; lz4 - BSD; brotli - MIT; attrs - MIT; fsspec - BSD; archspec - MIT / Apache-2.0
+- FFmpeg (gyan.dev build) - GPL v3, unmodified, portable
+- FMOD Engine (fmod.dll) by Firelight Technologies - NOT included: the setup downloads it from PyPI (the fmod_toolkit
+  package) while it runs, only to read ULTRAKILL's sounds, and deletes it afterwards

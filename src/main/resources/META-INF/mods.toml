@@ -5,11 +5,11 @@ license = "All rights reserved (code); no ULTRAKILL assets included"
 [[mods]]
 modId = "ultracraft"
 version = "${version}"
-displayName = "UltraCraft"
+displayName = "UltraCraft Reimagined"
 authors = "StanleyMOV"
 description = '''
 Play as V1 in Minecraft: ULTRAKILL's movement, arms, weapons and style system.
-ULTRAKILL's own models, textures, sounds and animations are built into this jar by the UltraCraft setup, from your
+ULTRAKILL's own models, textures, sounds and animations are built into this jar by the UltraCraft Reimagined setup, from your
 own copy of the game. The jar is for you only: please don't share it.
 '''
 

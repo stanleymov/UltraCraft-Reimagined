@@ -79,6 +79,7 @@ public final class UltraCraftClient {
 		}));
 
 		IEventBus bus = MinecraftForge.EVENT_BUS;
+		bus.addListener(com.ultracraft.client.shop.InventoryPoints::onBackground);
 		// ULTRAKILL has no speed FOV: the dash key is Minecraft's sprint key, so each dash briefly sprints and vanilla
 		// widened the view and eased it back (a bounce after the dash). Off while V1 drives the player.
 		Tune.def("cam.vanillaSpeedFov", 0, "1 = keep Minecraft's sprint / speed FOV change under V1 (it bounces after a dash)");

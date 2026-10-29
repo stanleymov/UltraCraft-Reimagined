@@ -59,6 +59,7 @@ public final class OffhandHold {
 		Tune.def("hold.mcRZ", 0, "off-hand item, Minecraft pose: extra turn about z, degrees (by eye)");
 		Tune.def("hold.mcScale", 1, "off-hand item, Minecraft pose: size (by eye)");
 		Tune.def("hold.hideLights", 1, "1 = a torch or lantern in the off-hand is carried, not held: the arm stays down and it is not drawn (it still lights, e.g. a shader pack's held light; user)");
+		Tune.def("hold.redSpeed", 0.2, "Knuckleblaster holding an off-hand item: speed of its Hold sway, x the game's (user: 0.2, by eye)");
 		Tune.def("hold.follow", 1, "how much the off-hand item turns with the palm when the arm moves (parry, coin flip ...): 1 = fully, 0 = it keeps facing the view");
 		Tune.def("hold.tpShow", 0, "1 = draw the off-hand item on the third-person V1 too (user: off, like the off-hand guns)");
 		Tune.def("hold.tpX", 0, "off-hand item on the third-person V1: offset from its hand.L bone, +x (model units; by eye)");
@@ -126,6 +127,11 @@ public final class OffhandHold {
 		String cur = fist.currentClip();
 		if (hold && (cur == null || cur.equalsIgnoreCase("Idle"))) fist.play("Hold", 1, 0.25f);
 		else if (!hold && "Hold".equalsIgnoreCase(cur)) fist.play("Idle", 1, 0.25f);
+		// the Knuckleblaster's Hold sways up and down at hold.redSpeed of the game's rate (user: too fast, 0.2; live)
+		if ("knuckleblaster".equals(fist.rigName()) && "Hold".equalsIgnoreCase(fist.currentClip())) {
+			var st = com.ultracraft.client.uk.UkTransitions.state(fist.rigName(), "Hold");
+			fist.setSpeed((st != null ? st.speed() : 1f) * (float) Tune.get("hold.redSpeed"));
+		}
 	}
 
 	/**

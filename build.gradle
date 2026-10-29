@@ -49,3 +49,15 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
+
+// The setup's payload: the mod jar without anything built from ULTRAKILL (the git-ignored resource folders), which the
+// setup rebuilds from the player's own install and adds back (installer/build_package.py ships this one)
+tasks.register('codeJar', Zip) {
+    dependsOn remapJar
+    archiveFileName = "UltraCraft-Reimagined-${project.version}-code.jar"
+    destinationDirectory = layout.buildDirectory.dir("libs")
+    from(zipTree(remapJar.archiveFile)) {
+        exclude "assets/ultracraft/textures/uk/**", "assets/ultracraft/sounds/uk/**", "assets/ultracraft/models/uk/**",
+            "assets/ultracraft/uk/**", "assets/ultracraft/sounds.json", "assets/ultracraft/font/*.ttf"
+    }
+}

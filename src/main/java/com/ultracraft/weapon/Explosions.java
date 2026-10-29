@@ -57,6 +57,8 @@ public final class Explosions {
 		Net.toNear(world, pos, new ExplosionPayload(spec.fxKind() | (harmless ? 8 : 0), (float) spec.maxSize(), pos));
 		// ExplosionController.Start: gasoline within 3 voxels (a box) lights; every player explosion uses the default 3
 		Gasoline.onExplosion(world, shooter, pos, 3);
+		// the plants in the blast go (the user's ask; no other block is touched, as in ULTRAKILL)
+		Plants.blast(world, shooter, pos, radius);
 		for (Entity e : world.getOtherEntities(null, new Box(pos, pos).expand(radius))) {
 			// an End crystal in the blast goes off
 			if (e instanceof net.minecraft.entity.decoration.EndCrystalEntity crystal) {

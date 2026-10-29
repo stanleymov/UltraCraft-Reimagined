@@ -583,7 +583,9 @@ public class UKProjectileEntity extends Entity {
 			if (hp.isEmpty() && e.getBoundingBox().expand(radius).contains(start)) hp = Optional.of(start);
 			if (hp.isPresent() && hp.get().squaredDistanceTo(start) < best) { best = hp.get().squaredDistanceTo(start); hitEnt = (LivingEntity) e; hitPoint = hp.get(); }
 		}
-		BlockHitResult block = world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+		BlockHitResult block = world.raycast(com.ultracraft.weapon.Plants.ctx(start, end, this));
+		// (through the plants on the way: they break - Plants)
+		com.ultracraft.weapon.Plants.shootStep(world, sh, start, end, block, hitEnt != null ? hitPoint : null);
 		boolean blockHit = block.getType() != HitResult.Type.MISS && (hitEnt == null || block.getPos().squaredDistanceTo(start) < best);
 		if (blockHit) {
 			Vec3d normal = Vec3d.of(block.getSide().getVector());
@@ -808,7 +810,7 @@ public class UKProjectileEntity extends Entity {
 				// the rocket stopped a tick behind where it was seen, and on unfreezing it came back that far before going
 				// on. It stops where the player saw it instead (short of anything solid on the way).
 				Vec3d v = getVelocity(), to = getPos().add(v);
-				BlockHitResult wall = world.raycast(new RaycastContext(getPos(), to, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+				BlockHitResult wall = world.raycast(com.ultracraft.weapon.Plants.ctx(getPos(), to, this));
 				setPosition(wall.getType() == HitResult.Type.MISS ? to : wall.getPos().subtract(v.normalize().multiply(0.05)));
 			}
 			if (frozen != isFrozen()) dataTracker.set(FROZEN, frozen);
@@ -893,7 +895,17 @@ public class UKProjectileEntity extends Entity {
 				hitPoint = p.get();
 			}
 		}
-		BlockHitResult block = world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+		// (through the plants on the way: they break - Plants; the Firestarter's gasoline lands on them as before: user)
+		BlockHitResult block = world.raycast(k == ProjectileKind.GASOLINE
+			? new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)
+			: com.ultracraft.weapon.Plants.ctx(start, end, this));
+		if (k != ProjectileKind.GASOLINE) {
+			var plants = com.ultracraft.weapon.Plants.shootStep(world, sh, start, end, block, hitEnt != null ? hitPoint : null);
+			// a rocket or core through gasolined leaves lights the gasoline on them (user; in ULTRAKILL the leaves would
+			// have stopped it, and its explosion - Grenade.Explode: TryIgniteAt - lit them)
+			if (k == ProjectileKind.ROCKET || k == ProjectileKind.CORE)
+				for (var pos : plants) com.ultracraft.weapon.Gasoline.tryIgniteAt(world, sh == null ? null : sh.getUuid(), Vec3d.ofCenter(pos), 3);
+		}
 		// the screwdriver sets off magnets it passes through, like the railcannon's beams (the player's choice: the game's
 		// drill only breaks Breakables that are not precisionOnly, and the spike's is)
 		if (k == ProjectileKind.SCREWDRIVER) {
@@ -1257,7 +1269,8 @@ public class UKProjectileEntity extends Entity {
 			Vec3d[] st = MagnetField.step(p, vel, held, target, grav, pull, axis, 0, angle);
 			Vec3d np = st[0];
 			vel = st[1];
-			BlockHitResult bh = world.raycast(new RaycastContext(p, np, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+			BlockHitResult bh = world.raycast(com.ultracraft.weapon.Plants.ctx(p, np, this));
+			com.ultracraft.weapon.Plants.shootStep(world, sh, p, np, bh, null);
 			if (bh.getType() != HitResult.Type.MISS) {
 				Vec3d n = Vec3d.of(bh.getSide().getVector());
 				np = bh.getPos().add(n.multiply(0.02));

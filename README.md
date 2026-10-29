@@ -1,14 +1,14 @@
-# UltraCraft
+# UltraCraft Reimagined
 
 ULTRAKILL inside Minecraft (Forge 1.20.1): you play as V1, with ULTRAKILL's own movement, weapons and every
 variation, arms, parries, style meter and shop, its first-person animations, sounds and HUD, converted from your own
 copy of ULTRAKILL.
 
-> **Work in progress: in beta testing.** There is no release yet; the setup that builds the mod from your ULTRAKILL
-> install comes with the first release.
+> **In beta testing.** No release yet: the setup is built and the first release follows the beta.
 
 > **Unofficial fan mod.** Not affiliated with or endorsed by New Blood Interactive, Arsi "Hakita" Patala or Mojang.
-> ULTRAKILL © New Blood Interactive. Minecraft © Mojang Studios / Microsoft.
+> ULTRAKILL © New Blood Interactive. Minecraft © Mojang Studios / Microsoft. Not related to the other Minecraft mods
+> called UltraCraft.
 
 ## What's in
 
@@ -25,21 +25,44 @@ copy of ULTRAKILL.
 - **Style meter and P**: style ranks, bonuses and freshness; points bank into P when a fight ends.
 - **The Terminal**: a craftable shop block with ULTRAKILL's shop screen, music and arm, to buy weapons and variations
   with P.
+- **Fire**: gasoline, the Firestarter and the Malicious railcannon set the world on fire; shots burn through leaves and
+  plants.
 - **Damage tuned to Minecraft**: armour by piece and material, big mobs and bosses on ULTRAKILL enemies' health and
   weaknesses (the Warden, the Wither and the Ender Dragon), boss kill rewards.
 - **Third person** shows V1 itself.
 
+## Installing
+
+You need **ULTRAKILL** (Steam; the base game, no DLC needed), **Minecraft Java Edition** and a modding launcher:
+**CurseForge**, **Prism Launcher** or **MultiMC**.
+
+1. Download `UltraCraft Reimagined Setup <version>.zip` from Releases and extract the whole zip.
+2. Close CurseForge if it is open.
+3. Run `Setup UltraCraft Reimagined.exe`. It finds ULTRAKILL in your Steam libraries and your Forge 1.20.1 profiles,
+   then lets you pick: a new **UltraCraft Reimagined** profile (CurseForge, Prism Launcher or MultiMC), one of your
+   own Forge 1.20.1 profiles, or any mods folder.
+4. It builds the mod from your ULTRAKILL in a few minutes (command windows may flash; that's normal) and puts the jar
+   in that profile. Play it from your launcher: a new profile downloads Minecraft and Forge the first time.
+
+The setup is also the updater: run a newer one over your install. When an update brings no new ULTRAKILL files, it
+only replaces the code and doesn't need ULTRAKILL.
+
+Keys: sprint = dash, sneak = slide (ground slam in the air), mouse back = punch, mouse forward = whiplash, G = change
+arm, C = next variation (or press the weapon's number key again), R = last weapon. Craft a Terminal to buy weapons,
+variations and arms with P.
+
 ## No game files here: bring your own
 
-This repository holds **code only**: no ULTRAKILL files and nothing converted from them. The setup will build the
-mod's ULTRAKILL content (models, animations, textures, sounds, fonts, the shop screen) on your PC from **your own**
-ULTRAKILL install, with the scripts in `tools/extract/`. The jar it builds contains ULTRAKILL's content, so it is for
-you only: please don't share it; share the setup instead.
+This repository and the setup hold **code only**: no ULTRAKILL files and nothing converted from them. The setup builds
+the mod's ULTRAKILL content (models, animations, textures, sounds, fonts, the shop screen) on your PC from **your own**
+ULTRAKILL install, with the scripts in `tools/extract/`. The sound library FMOD isn't ours to pass on either, so the
+setup downloads it from PyPI while it runs. The jar it builds contains ULTRAKILL's content, so it is for you only:
+please don't share it; share the setup instead.
 
 ## Made and tested by people and Claude, not by generative AI slop
 
 - **No generative AI was used for any visual or audio asset.** Every model, animation, texture, sound and HUD element
-  in UltraCraft is ULTRAKILL's own, converted from your own install.
+  in UltraCraft Reimagined is ULTRAKILL's own, converted from your own install.
 - **The code and this description were written with [Claude Code](https://claude.com/claude-code)** (Anthropic),
   under the author's direction, and go through intensive human testing and tuning.
 
@@ -50,10 +73,11 @@ you only: please don't share it; share the setup instead.
 | `src/` | the mod (Forge 1.20.1, Java): V1's movement, weapons, arms, rigs and animation player, HUD, style meter, shop, damage |
 | `tools/extract/` | the extraction pipeline the setup runs on your ULTRAKILL install: Addressables catalog, rigs and animation clips, meshes, textures, sounds, fonts, the shop canvas |
 | `tools/re/` | scripts that read ULTRAKILL's game data and code layout to look up the game's own values |
+| `installer/` | the setup: wizard and engine (Python), launcher (Rust), package builder |
 | `docs/` | notes on ULTRAKILL's mechanics and its files, and the plan |
 
-Building from source: `./gradlew build` (JDK 17). The mod needs the converted ULTRAKILL content in
+Building from source: `./gradlew build codeJar` (JDK 17). The mod needs the converted ULTRAKILL content in
 `src/main/resources/assets/ultracraft/` (git-ignored), which `tools/extract/build_assets.py` builds from an ULTRAKILL
-install.
+install. `python installer/build_package.py --zip` then makes the setup download from the code-only jar.
 
 Code: all rights reserved, StanleyMOV.

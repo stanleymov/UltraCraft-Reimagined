@@ -20,7 +20,7 @@ public final class UkConfig {
 		PARRY_FLASH = b.comment("White screen flash on a successful parry (ULTRAKILL's Parry Flash option)").define("parryFlash", true);
 		b.pop();
 		b.push("controls");
-		ZOOM_SENSITIVITY = b.comment("Mouse sensitivity while zoomed in with the railcannon, as a share of normal (ULTRAKILL scales it with the zoom: 0.5)").defineInRange("zoomSensitivity", 0.5, 0.05, 1.0);
+		ZOOM_SENSITIVITY = b.comment("Mouse sensitivity while zoomed in with the railcannon, as a share of normal (ULTRAKILL scales it with the zoom; 0.4 by the user's choice)").defineInRange("zoomSensitivity", 0.4, 0.05, 1.0);
 		b.pop();
 		b.push("movement");
 		AIR_BRAKE = b.comment("Air brake: letting go of every movement key in mid-air slows V1's sideways drift, to land on a single block (not in ULTRAKILL; launches faster than walking keep their speed)").define("airBrake", true);
@@ -40,7 +40,7 @@ public final class UkConfig {
 	}
 
 	public static double zoomSensitivity() {
-		return SPEC.isLoaded() ? ZOOM_SENSITIVITY.get() : 0.5;
+		return SPEC.isLoaded() ? ZOOM_SENSITIVITY.get() : 0.4;
 	}
 
 	/** Off unless the player turned it on (also off where this config is not loaded). */

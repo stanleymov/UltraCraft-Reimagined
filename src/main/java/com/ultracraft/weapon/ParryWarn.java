@@ -1,6 +1,7 @@
 package com.ultracraft.weapon;
 
 import com.ultracraft.mixin.BlazeShootAccessor;
+import com.ultracraft.mixin.CreeperFuseAccessor;
 import com.ultracraft.mixin.CrossbowGoalAccessor;
 import com.ultracraft.mixin.GhastShootAccessor;
 import com.ultracraft.mixin.MobGoalsAccessor;
@@ -10,6 +11,7 @@ import com.ultracraft.mixin.WitherSkullAccessor;
 import com.ultracraft.net.Net;
 import com.ultracraft.net.ParryWarnPayload;
 import net.minecraft.entity.boss.WitherEntity;
+import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.item.BowItem;
 import net.minecraft.server.MinecraftServer;
@@ -21,7 +23,8 @@ import net.minecraft.server.world.ServerWorld;
  * V2Flash star, at their head before the attack): a moment before one of our parryable ranged attacks leaves the mob
  * (parry.warnLead ticks), V1's client is told to flash the star there. Each shot is read off the mob's own countdown:
  * a drawn bow (BowAttackGoal shoots at 20 ticks of use), a charged crossbow, the ranged-attack countdown, a ghast's
- * fireball, a blaze's burst, a shulker's bullet, the Wither's side heads and the Warden's sonic boom.
+ * fireball, a blaze's burst, a shulker's bullet, the Wither's side heads, the Warden's sonic boom and a creeper's fuse
+ * (the user's ask: a creeper about to blow is parried with a punch or a shooting parry, ParryServer.tryParryCreeper).
  */
 public final class ParryWarn {
 	private ParryWarn() {}
@@ -48,9 +51,21 @@ public final class ParryWarn {
 		}
 	}
 
+	/** Ticks before a creeper blows that its star flashes (user: the shot lead was too tight for a punch; 0.5 s). */
+	public static int creeperLead() {
+		return (int) ServerTune.get("parry.creeperLead", 10);
+	}
+
 	private static boolean aboutToShoot(MobEntity m, int lead) {
 		// (no warnings on the Wither: its heads fire all the time, the star never stopped; user)
 		if (m instanceof WitherEntity) return false;
+		// a hissing creeper (CreeperEntity.tick: it blows when its fuse reaches fuseTime): the star as the fuse passes
+		// fuseTime - parry.creeperLead on its way up
+		if (m instanceof CreeperEntity c) {
+			CreeperFuseAccessor f = (CreeperFuseAccessor) c;
+			int at = f.ultracraft$fuseTime() - creeperLead();
+			return c.getFuseSpeed() > 0 && f.ultracraft$lastFuseTime() < at && f.ultracraft$currentFuseTime() >= at;
+		}
 		// the Warden's sonic boom (SonicBoomTask): it goes off when SONIC_BOOM_SOUND_DELAY (34 ticks) runs out
 		if (m instanceof net.minecraft.entity.mob.WardenEntity w) {
 			var brain = w.getBrain();

@@ -13,7 +13,7 @@ public final class UkConfigScreen extends Screen {
 	private final Screen parent;
 
 	public UkConfigScreen(Screen parent) {
-		super(Text.literal("UltraCraft options"));
+		super(Text.literal("UltraCraft Reimagined options"));
 		this.parent = parent;
 	}
 

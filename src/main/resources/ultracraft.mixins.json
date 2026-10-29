@@ -4,6 +4,6 @@
   "package": "com.ultracraft.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "UltraCraft-refmap.json",
-  "mixins": ["PlayerFallMixin", "ServerWorldFreezeMixin", "MobPlayerCollideMixin", "MobGoalsAccessor", "PlayerLedgeMixin", "HungerManagerMixin", "PlayerEatMixin", "PlayerCrawlMixin", "CrossbowGoalAccessor", "ProjectileGoalAccessor", "GhastShootAccessor", "BlazeShootAccessor", "ShulkerShootAccessor", "WitherSkullAccessor", "EntityCrawlWallMixin"],
+  "mixins": ["PlayerFallMixin", "ServerWorldFreezeMixin", "MobPlayerCollideMixin", "MobGoalsAccessor", "PlayerLedgeMixin", "HungerManagerMixin", "PlayerEatMixin", "PlayerCrawlMixin", "CrossbowGoalAccessor", "ProjectileGoalAccessor", "GhastShootAccessor", "BlazeShootAccessor", "ShulkerShootAccessor", "WitherSkullAccessor", "EntityCrawlWallMixin", "CreeperFuseAccessor"],
   "injectors": { "defaultRequire": 1 }
 }

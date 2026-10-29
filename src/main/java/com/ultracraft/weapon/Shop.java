@@ -113,7 +113,7 @@ public final class Shop {
 		masks[WeaponKind.REVOLVER.ordinal()] |= 1;
 		setOwned(p, masks);
 		sync(p, 0);
-		p.sendMessage(Text.literal(mask == 7 ? "UltraCraft shop: everything owned" : "UltraCraft shop: back to the Piercer only"));
+		p.sendMessage(Text.literal(mask == 7 ? "UltraCraft Reimagined shop: everything owned" : "UltraCraft Reimagined shop: back to the Piercer only"));
 	}
 
 	private static void setPoints(ServerPlayerEntity p, int points) {

@@ -70,7 +70,12 @@ public final class ParryServer {
 
 	public static void init() {
 		MinecraftForge.EVENT_BUS.addListener(ParryServer::onAttack);
-		MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e) -> { if (e.phase == TickEvent.Phase.END) tick(); });
+		// parried projectiles before the worlds tick: their coming step is checked before Minecraft moves them, or a
+		// fast arrow met the mob by vanilla's own hit first and only sometimes went off (user)
+		MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e) -> {
+			if (e.phase == TickEvent.Phase.START) { if (!worldFrozen()) tickParried(); }
+			else tick();
+		});
 	}
 
 	/** A mob's direct melee hit on a player becomes a parry window; the damage is applied when it closes. */
@@ -87,6 +92,9 @@ public final class ParryServer {
 			else sonics.add(new Sonic(w, p, src, e.getAmount(), new int[] {(int) ServerTune.get("parry.sonicLate", 3)}));
 			return;
 		}
+		// (an explosion is no swing: a creeper's blast comes straight from the creeper, which is gone when the window
+		// would close, so it never landed; the creeper is parried before it blows, tryParryCreeper)
+		if (src.isIn(net.minecraft.registry.tag.DamageTypeTags.IS_EXPLOSION)) return;
 		if (!(src.getAttacker() instanceof MobEntity mob) || src.getSource() != mob || !mob.isAlive()) return;
 		if (e.getAmount() <= 0 || p.isInvulnerableTo(src)) return;
 		e.setCanceled(true);
@@ -145,7 +153,6 @@ public final class ParryServer {
 				applying = false;
 			}
 		}
-		tickParried();
 		for (Iterator<Active> it = active.iterator(); it.hasNext(); ) {
 			Active a = it.next();
 			if (--a.ticks[0] < 0 || !a.p.isAlive() || a.p.isDisconnected()) { it.remove(); continue; }
@@ -190,6 +197,34 @@ public final class ParryServer {
 		world.playSound(null, p.getX(), p.getY(), p.getZ(), net.minecraft.sound.SoundEvents.ENTITY_WARDEN_SONIC_BOOM, net.minecraft.sound.SoundCategory.PLAYERS, 3f, 1f);
 		success(p, from);
 		Explosions.explode(world, p, to, Explosions.PARRIED, false, false, "parry", null);
+	}
+
+	/**
+	 * A Feedbacker punch or shooting parry on a creeper about to blow: within parry.creeperWindow ticks of its blast
+	 * (from the warning star on, ParryWarn) its own explosion is called off - its fuse stops - and the caller's parry
+	 * kills it; then creeperBlast. Outside the window the hit just kills it, as any punch does.
+	 */
+	public static boolean tryParryCreeper(ServerPlayerEntity p, LivingEntity t) {
+		if (!(t instanceof net.minecraft.entity.mob.CreeperEntity c) || !c.isAlive() || c.getFuseSpeed() <= 0) return false;
+		var f = (com.ultracraft.mixin.CreeperFuseAccessor) c;
+		int window = (int) ServerTune.get("parry.creeperWindow", ParryWarn.creeperLead() + 1);
+		if (f.ultracraft$currentFuseTime() < f.ultracraft$fuseTime() - window) return false;
+		c.setFuseSpeed(-1);
+		f.ultracraft$setCurrentFuseTime(0);
+		com.ultracraft.UltraCraft.LOG.info("[parry] creeper {} parried by {}", c.getId(), p.getName().getString());
+		return true;
+	}
+
+	/**
+	 * The parried creeper's blast, ULTRAKILL style (user): V1's own explosion where it stood, as a parried projectile's
+	 * (Explosions.PARRIED, like the parried sonic boom) - it hits the mobs around, only pushes V1, breaks no blocks; a
+	 * charged creeper's is twice as big, as Minecraft's is.
+	 */
+	public static void creeperBlast(ServerPlayerEntity p, LivingEntity creeper) {
+		boolean charged = creeper instanceof net.minecraft.entity.mob.CreeperEntity c && c.shouldRenderOverlay();
+		Explosions.explode(p.getServerWorld(), p, creeper.getBoundingBox().getCenter(), charged ? Explosions.PARRIED.scaled(2f) : Explosions.PARRIED,
+			false, false, "parry", null);
+		// (still alive - armour, a potion: its fuse stays off, it is just a creeper again)
 	}
 
 	/** A Feedbacker punch or shotgun zone hit landed on `target`: true if that parried its pending attack. */
@@ -259,14 +294,26 @@ public final class ParryServer {
 
 	/** @param own V1's own shot (boosted pellets): the parry happens, the style meter gets nothing (arg 1) */
 	public static void success(ServerPlayerEntity p, Vec3d at, boolean own) {
-		com.ultracraft.UltraCraft.LOG.info("[parry] PARRY by {} at {}{}", p.getName().getString(), at, own ? " (own shot: no heal)" : "");
+		success(p, at, own, false);
+	}
+
+	/**
+	 * A shooting parry (the shotgun's point-blank zone on an attacking enemy): the whole parry - flash, freeze, sound,
+	 * heal, style - but no fist comes up (arg 3; user: the only difference from a punching parry).
+	 */
+	public static void shotSuccess(ServerPlayerEntity p, Vec3d at) {
+		success(p, at, false, true);
+	}
+
+	private static void success(ServerPlayerEntity p, Vec3d at, boolean own, boolean shot) {
+		com.ultracraft.UltraCraft.LOG.info("[parry] PARRY by {} at {}{}", p.getName().getString(), at, own ? " (own shot: no heal)" : shot ? " (shooting parry)" : "");
 		// NewMovement.Parry's full heal only for parrying something hostile, not for boosting your own pellets
 		if (!own) p.setHealth(p.getMaxHealth());
 		// the whole game stops with the client's freeze (same live settings); only alone in the world, so a parry never
 		// stops the game for other players
 		if (ServerTune.get("parry.freezeOn", 1) != 0 && p.getServer() != null && p.getServer().getCurrentPlayerCount() <= 1)
 			freezeUntil = System.nanoTime() + (long) (ServerTune.get("parry.freeze", 0.3) * 1e9);
-		Net.toPlayer(p, new HitPayload(HitPayload.PARRY, HitPayload.PUNCH, own ? 1 : 0, at));
+		Net.toPlayer(p, new HitPayload(HitPayload.PARRY, HitPayload.PUNCH, own ? 1 : shot ? 3 : 0, at));
 	}
 
 	/**
@@ -406,10 +453,10 @@ public final class ParryServer {
 		}
 	}
 
-	/** Punch.ParryProjectile: back where V1 looks, twice the speed, now V1's projectile. */
+	/** Punch.ParryProjectile: back where V1 looks, twice the speed (at least 100 u/s), now V1's projectile. */
 	private static void parryProjectile(ServerPlayerEntity p, ProjectileEntity pr, Vec3d start, Vec3d d) {
 		Vec3d target = WeaponServer.parryLookTarget(p, start, d);
-		double speed = Math.max(pr.getVelocity().length() * 2, 1.5);
+		double speed = Math.max(pr.getVelocity().length() * 2, 100 * Damage.SCALE_BLOCKS / 20);
 		Vec3d v = target.subtract(pr.getPos()).normalize().multiply(speed);
 		pr.setOwner(p);
 		pr.setVelocity(v);

@@ -22,7 +22,8 @@ import struct
 import sys
 from dataclasses import dataclass, field
 
-DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\ULTRAKILL"
+# the setup points every exporter at the player's own install through UK_GAME
+DEFAULT_GAME = os.environ.get("UK_GAME") or r"C:\Program Files (x86)\Steam\steamapps\common\ULTRAKILL"
 
 
 @dataclass

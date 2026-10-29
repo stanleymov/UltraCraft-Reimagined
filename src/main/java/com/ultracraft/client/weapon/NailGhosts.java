@@ -130,7 +130,7 @@ public final class NailGhosts {
 				if (p.isEmpty() && e.getBoundingBox().expand(radius).contains(start)) p = Optional.of(start);
 				if (p.isPresent()) best = Math.min(best, p.get().squaredDistanceTo(start));
 			}
-			BlockHitResult block = c.world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, c.player));
+			BlockHitResult block = c.world.raycast(com.ultracraft.weapon.Plants.ctx(start, end, c.player));
 			boolean blockHit = block.getType() != HitResult.Type.MISS && block.getPos().squaredDistanceTo(start) < best;
 			if (blockHit) bounce(g, block, v);
 			else if (best < Double.MAX_VALUE) it.remove(); // into a mob: the server's nail takes over (it sticks in)

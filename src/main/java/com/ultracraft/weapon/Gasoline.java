@@ -46,10 +46,13 @@ public final class Gasoline {
 	private static final class Stain {
 		final int id;
 		final boolean floor;
+		final Vec3d pos, normal;
 
-		Stain(int id, boolean floor) {
+		Stain(int id, boolean floor, Vec3d pos, Vec3d normal) {
 			this.id = id;
 			this.floor = floor;
+			this.pos = pos;
+			this.normal = normal;
 		}
 	}
 
@@ -147,7 +150,7 @@ public final class Gasoline {
 		int[] v = stainVoxel(pos, normal);
 		Voxel vox = s.voxels.computeIfAbsent(key(v[0], v[1], v[2]), k -> new Voxel(v[0], v[1], v[2]));
 		// GasolineStain.Start: IsFloor = the stain faces up more than 0.25
-		Stain st = new Stain(s.nextId++, normal.y > 0.25);
+		Stain st = new Stain(s.nextId++, normal.y > 0.25, pos, normal);
 		vox.stains.add(st);
 		s.order.add(new long[] {st.id, vox.key()});
 		Net.toNear(w, pos, new GasolinePayload(GasolinePayload.STAIN, st.id, pos, normal, w.random.nextFloat() * 360f, w.random.nextInt(5)));
@@ -162,6 +165,7 @@ public final class Gasoline {
 		// StainVoxelManager.AcknowledgeNewStain: a burning voxel takes the new gasoline as fuel; one beside fire catches
 		if (vox.burning) {
 			refuel(w, vox);
+			lightBlock(w, st, igniter(w, vox), new HashSet<>());
 			return;
 		}
 		for (int dx = -1; dx <= 1; dx++)
@@ -208,6 +212,7 @@ public final class Gasoline {
 			v.burning = true;
 			v.t = 0;
 			Net.toNear(w, voxelCenter(v.x, v.y, v.z), GasolinePayload.voxel(GasolinePayload.FIRE, v.x, v.y, v.z));
+			lightBlocks(w, v);
 		} else {
 			// in water: one explosion per 5 x 5 x 5 of a spreading fire (ShouldExplodeAt), the rest just goes
 			boolean explode = true;
@@ -230,6 +235,21 @@ public final class Gasoline {
 		}
 		schedulePropagation(s, v);
 		return true;
+	}
+
+	/** The fire catches on Minecraft's blocks too, under every stain of a voxel that lights (BlockFire.splat; user). */
+	private static void lightBlocks(ServerWorld w, Voxel v) {
+		ServerPlayerEntity by = igniter(w, v);
+		Set<BlockPos> done = new HashSet<>();
+		for (Stain st : v.stains) lightBlock(w, st, by, done);
+	}
+
+	private static void lightBlock(ServerWorld w, Stain st, ServerPlayerEntity by, Set<BlockPos> done) {
+		BlockFire.splat(w, by, st.pos, st.normal, done);
+	}
+
+	private static ServerPlayerEntity igniter(ServerWorld w, Voxel v) {
+		return v.igniter == null ? null : (ServerPlayerEntity) w.getPlayerByUuid(v.igniter);
 	}
 
 	/** StainVoxel.TryIgnite's water check: an OverlapSphere of 1.375 u round the voxel's centre against water. */

@@ -35,7 +35,7 @@ public final class HitView {
 		float td = c.getTickDelta();
 		Vec3d d = dir.normalize();
 		Vec3d end = origin.add(d.multiply(Damage.rangeBlocks()));
-		BlockHitResult block = c.world.raycast(new RaycastContext(origin, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+		BlockHitResult block = c.world.raycast(com.ultracraft.weapon.Plants.ctx(origin, end, p));
 		if (block.getType() != HitResult.Type.MISS) end = block.getPos();
 		double r = radiusUnits * Damage.SCALE_BLOCKS;
 		record Seen(LivingEntity e, Vec3d point, double along, boolean head) {}

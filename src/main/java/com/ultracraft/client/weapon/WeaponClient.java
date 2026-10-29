@@ -77,6 +77,8 @@ public final class WeaponClient {
 
 	private boolean hooked;
 	private int hookedGen = -1;
+	/** the hotbar slot held now and the one before it (Last Weapon) */
+	private int curSlot = -1, lastSlot = -1;
 
 	/** this is the off-hand copy: its own rigs (ViewModel's off-hand instances) and ArsenalClient.OFF */
 	public final boolean off;
@@ -148,6 +150,12 @@ public final class WeaponClient {
 		// (at a Terminal the guns are put away and the arm points: GunControl.NoWeapon / FistControl.ShopMode)
 		boolean inputOk = client.currentScreen == null && !p.isDead() && !com.ultracraft.client.shop.ShopMode.active();
 
+		// --- Last Weapon (ULTRAKILL's LastWeapon, the user's R): back to the hotbar slot held before this one, so it
+		// swaps between the last two (the slot change reaches the server as any slot change does) ---
+		int slot = p.getInventory().selectedSlot;
+		if (slot != curSlot) { lastSlot = curSlot; curSlot = slot; }
+		if (inputOk && UKKeys.LAST_WEAPON.press && lastSlot >= 0 && lastSlot < 9 && lastSlot != slot) p.getInventory().selectedSlot = lastSlot;
+
 		// --- WeaponCharges regen (always, like ULTRAKILL's charges object; the off-hand gun's coins too) ---
 		regenCoins(p.getMainHandStack());
 		OFF.regenCoins(p.getOffHandStack());
@@ -182,11 +190,11 @@ public final class WeaponClient {
 		holdingPunch = UKKeys.PUNCH.held;
 		WhiplashClient.INSTANCE.tick(client, inputOk);
 
-		// Hitscan keys (E/Q) swap variation; Q with no change = last weapon later.
+		// the next variation key, or the selected slot's own number key again
 		boolean samePress = UKKeys.sameSlotPress;
-		if (inputOk && heldKind != null && (UKKeys.NEXT_VAR.press || UKKeys.PREV_VAR.press || samePress)) {
+		if (inputOk && heldKind != null && (UKKeys.NEXT_VAR.press || samePress)) {
 			// (to the next owned variation: the rest are bought at the Terminal)
-			int v = com.ultracraft.client.shop.ShopClient.nextOwned(heldKind, UKWeaponItem.variation(held), UKKeys.PREV_VAR.press ? -1 : 1);
+			int v = com.ultracraft.client.shop.ShopClient.nextOwned(heldKind, UKWeaponItem.variation(held), 1);
 			int code = switch (heldKind) { case SHOTGUN -> FirePayload.SHOTGUN; case NAILGUN -> FirePayload.NAILGUN; case RAILCANNON -> FirePayload.RAILCANNON; case ROCKET -> FirePayload.ROCKET; default -> FirePayload.REVOLVER; };
 			if (v != UKWeaponItem.variation(held)) Net.toServer(new FirePayload(code, FirePayload.MODE_VARIATION, Math.floorMod(v, 3), p.getEyePos(), p.getRotationVec(1f)));
 		}
@@ -233,7 +241,8 @@ public final class WeaponClient {
 		arsenal.charges(heldKind == WeaponKind.NAILGUN && UKWeaponItem.variation(held) == 0 && inputOk && UKKeys.ATTACK.held && !thirdPerson);
 		if (heldKind != null && !revolver && !thirdPerson) arsenal.tick(p, heldKind, UKWeaponItem.variation(held), inputOk);
 		else arsenal.putAway();
-		arsenal.railHum(revolver ? null : heldKind, UKWeaponItem.variation(held), !thirdPerson);
+		// the shop puts the gun down: its charged hum and capsule loops stop, and start again on the way out (user)
+		arsenal.railHum(revolver ? null : heldKind, UKWeaponItem.variation(held), !thirdPerson && !com.ultracraft.client.shop.ShopMode.active());
 		// third person is clash mode (GunControl.NoWeapon): the revolver is put away like the rest, so coming back plays
 		// its PickUp (Revolver.OnEnable)
 		if (revolver && !thirdPerson) {
@@ -807,6 +816,8 @@ public final class WeaponClient {
 					V1.INSTANCE.boostCharge = 300;
 					V1.INSTANCE.antiHp = 0;
 				}
+				// (arg 3: a shooting parry - the shotgun's point-blank blast parried it, the fist stays down)
+				if (msg.arg() == 3) break;
 				RigInstance f = fistRig();
 				// Punch.Parry: anim.Play("Hook", 0, 0.065f) -- past the clip's own ActiveStart, so no second hit check
 				if (f != null) f.play("Hook", 1, 0, 0.065f);

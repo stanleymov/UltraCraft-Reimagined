@@ -713,7 +713,13 @@ public final class ArsenalClient {
 			raicharge = 0;
 			railChargePlayed = false;
 			fire(p, FirePayload.RAILCANNON, 0, 0);
-			if (variation == 2) UKSound.play("uk.weapons.bluezone-autobots-shutdown-003", 1f, 2f);
+			// RailcannonMaliciousFire: Bluezone-Autobots-shutdown-003 at pitch 3 (its octave-up copy) and, on its two child
+			// Audio Sources, Explosion 1 at pitch 1 and 2, all at volume 1
+			if (variation == 2) {
+				UKSound.play("uk.weapons.bluezone-autobots-shutdown-003", 1f, 3f);
+				UKSound.play("uk.impacts.explosion_1", 1f, 1f);
+				UKSound.play("uk.impacts.explosion_1", 1f, 2f);
+			}
 			else UKSound.play("uk.weapons.railcannonfire4", 0.65f, 1f);
 			if (rig != null) rig.play("Fire", 1, 0);
 			V1.INSTANCE.shake = Math.max(V1.INSTANCE.shake, 2);
@@ -843,10 +849,9 @@ public final class ArsenalClient {
 		net.minecraft.util.math.Vec3d eye = p.getEyePos(), look = p.getRotationVec(1f), end = eye.add(look.multiply(200));
 		// a barrel inside a wall: from the eye, as the game does
 		var world = p.getWorld();
-		if (world.raycast(new net.minecraft.world.RaycastContext(eye, sp, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
-			net.minecraft.world.RaycastContext.FluidHandling.NONE, p)).getType() != net.minecraft.util.hit.HitResult.Type.MISS) return;
-		var block = world.raycast(new net.minecraft.world.RaycastContext(eye, end, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
-			net.minecraft.world.RaycastContext.FluidHandling.NONE, p));
+		// (shots go through plants: Plants.ctx, as on the server)
+		if (world.raycast(com.ultracraft.weapon.Plants.ctx(eye, sp, p)).getType() != net.minecraft.util.hit.HitResult.Type.MISS) return;
+		var block = world.raycast(com.ultracraft.weapon.Plants.ctx(eye, end, p));
 		net.minecraft.util.math.Vec3d aim = block.getType() == net.minecraft.util.hit.HitResult.Type.MISS ? end : block.getPos();
 		var mob = net.minecraft.entity.projectile.ProjectileUtil.raycast(p, eye, aim, p.getBoundingBox().stretch(aim.subtract(eye)).expand(1),
 			e -> !e.isSpectator() && e.canHit() && e != p, eye.squaredDistanceTo(aim));

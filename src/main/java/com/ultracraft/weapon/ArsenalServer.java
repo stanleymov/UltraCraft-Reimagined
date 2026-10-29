@@ -92,21 +92,24 @@ public final class ArsenalServer {
 					Optional<Vec3d> hit = e.getBoundingBox().expand(0.3).raycast(origin, origin.add(dir.multiply(reach)));
 					if (hit.isEmpty()) continue;
 					// not through a wall: the zone only reaches what the barrel can see
-					BlockHitResult wall = world.raycast(new RaycastContext(origin, hit.get(), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+					BlockHitResult wall = world.raycast(Plants.ctx(origin, hit.get(), p));
 					if (wall.getType() != HitResult.Type.MISS) continue;
 					LivingEntity t = (LivingEntity) e;
 					boolean wasAlive = t.isAlive();
 					// Zombie.GotHit "shotgunzone" on an attacking enemy: double damage and a parry
-					boolean parried = ParryServer.tryParryMelee(p, t);
+					// (a creeper about to blow: a shooting parry too, its blast becomes V1's below)
+					boolean creeper = ParryServer.tryParryCreeper(p, t);
+					boolean parried = creeper || ParryServer.tryParryMelee(p, t);
 					Damage.deal(p, t, parried ? 8f : 4f, dir, 10000f, HitPayload.SHOTGUNZONE, hit.get());
-					if (parried) ParryServer.success(p, hit.get());
+					if (parried) ParryServer.shotSuccess(p, hit.get());
 					boolean killed = wasAlive && !t.isAlive();
 					Net.toNear(world, hit.get(), new HitPayload(killed ? HitPayload.KILL : HitPayload.ENEMY_HIT, HitPayload.SHOTGUNZONE, 0, Damage.flags(t), hit.get()));
+					if (creeper) ParryServer.creeperBlast(p, t);
 				}
 				if (variation == 1 && charge == 3) {
 					// overpump: Explosion ×1.5 size, damage 50 one unit in front (or at the wall)
 					Vec3d at = origin.add(dir.multiply(1 * Damage.SCALE_BLOCKS));
-					BlockHitResult b = world.raycast(new RaycastContext(origin, at, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+					BlockHitResult b = world.raycast(Plants.ctx(origin, at, p));
 					if (b.getType() != HitResult.Type.MISS) at = b.getPos().subtract(dir.multiply(0.05));
 					Explosions.explode(world, p, at, Explosions.OVERPUMP, false, "shotgun1", null);
 					return;
@@ -190,7 +193,7 @@ public final class ArsenalServer {
 			saw.getPunched(from, target.subtract(from));
 			result |= HitPayload.SWING_SAW;
 		}
-		BlockHitResult block = world.raycast(new RaycastContext(origin, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+		BlockHitResult block = world.raycast(Plants.ctx(origin, end, p));
 		double wallDist = block.getType() == HitResult.Type.MISS ? Double.MAX_VALUE : block.getPos().distanceTo(origin);
 		// the 8 u ray: the first enemy, or a grenade in front of it (or at the camera)
 		double bestDist = wallDist;
@@ -201,6 +204,8 @@ public final class ArsenalServer {
 			var hit = e.getBoundingBox().raycast(origin, end);
 			if (hit.isPresent() && hit.get().distanceTo(origin) < bestDist) { bestDist = hit.get().distanceTo(origin); best = (LivingEntity) e; point = hit.get(); }
 		}
+		// the plants the swing goes through, up to the enemy or the wall it met (user: the hammer broke none)
+		Plants.shootStep(world, p, origin, end, block, point);
 		UKProjectileEntity nade = null;
 		double nadeDist = Math.min(bestDist, wallDist), trig = UKProjectileEntity.grenadeTrigger();
 		// (a Rocket is a Grenade too - in ObjectTracker.grenadeList, so the hammer's HitNade sends it off as the same

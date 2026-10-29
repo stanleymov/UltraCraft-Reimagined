@@ -238,6 +238,8 @@ public final class WeaponServer {
 		if (!msg.total()) UltraCraft.LOG.info("[points] fight banked {} style -> +{} P (total {})", msg.points(), earned, total);
 		persisted.putInt("ultracraft.P", total);
 		tag.put("PlayerPersisted", persisted);
+		// the client counts a fight's points as they come (not doubled): it shows the bank's real total from here on
+		Net.toPlayer(p, new PointsSyncPayload(total));
 	}
 
 	private static void onFire(FirePayload msg, ServerPlayerEntity p) {
@@ -508,7 +510,9 @@ public final class WeaponServer {
 			boolean wasAlive = best.isAlive();
 			// a Feedbacker hit on an enemy in its parry window (Zombie.GotHit with hitter "punch" while attacking):
 			// the attack is cancelled, the enemy takes the parry damage and a hard shove, V1 is healed
-			boolean parried = !heavy && ParryServer.tryParryMelee(p, best);
+			// (a creeper about to blow: the parry calls its blast off and V1's goes off instead, below)
+			boolean creeper = !heavy && ParryServer.tryParryCreeper(p, best);
+			boolean parried = creeper || (!heavy && ParryServer.tryParryMelee(p, best));
 			if (parried) {
 				Damage.deal(p, best, 2f, d, 25000f * 1000f / 20f, HitPayload.PUNCH);
 				ParryServer.success(p, point);
@@ -516,22 +520,28 @@ public final class WeaponServer {
 			boolean killed = wasAlive && !best.isAlive();
 			boolean head = Hitscan.isHeadshot(best, point, start, d);
 			Net.toNear(world, point, new HitPayload(killed ? HitPayload.KILL : HitPayload.ENEMY_HIT, heavy ? HitPayload.HEAVYPUNCH : HitPayload.PUNCH, head ? 1 : 0, Damage.flags(best), point));
+			if (creeper) ParryServer.creeperBlast(p, best);
+			// the plants between the fist and the enemy go too (the user: the arms break what the guns do)
+			Plants.shoot(world, p, start, point);
 			// blood heal: the enemy's blood lands on V1 at arm's length (BloodsplatterManager → GetHealth)
 			BloodHeal.heal(p, heavy ? 10 : 5);
 			return;
 		}
 		// (the game punches saws only when the punch hit no enemy: Punch.ActiveFrame's !hitSomething && !parriedSomething)
 		if (!heavy && ParryServer.tryPunchSaws(p, start, d)) return;
-		BlockHitResult block = world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
+		// (through the plants, which the punch breaks - Plants; user: the arms break what the guns do)
+		BlockHitResult block = world.raycast(Plants.ctx(start, end, p));
+		Plants.shootStep(world, p, start, end, block, null);
 		if (block.getType() != HitResult.Type.MISS) Net.toPlayer(p, new HitPayload(HitPayload.WALL_HIT, HitPayload.PUNCH, 0, block.getPos()));
 	}
 
-	/** Punch.GetParryLookTarget: the first enemy or surface the camera ray meets, else 100 u ahead. */
+	/** Punch.GetParryLookTarget: the first enemy the camera ray meets, else straight ahead. */
 	static Vec3d parryLookTarget(ServerPlayerEntity p, Vec3d start, Vec3d d) {
 		var world = p.getServerWorld();
-		Vec3d far = start.add(d.multiply(100 * Damage.SCALE_BLOCKS));
-		BlockHitResult block = world.raycast(new RaycastContext(start, far, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p));
-		Vec3d end = block.getType() == HitResult.Type.MISS ? far : block.getPos();
+		// Punch.GetParryLookTarget: a ray along the camera against enemies only (LMD.Enemies), not the world - the first
+		// one on the crosshair line, else straight ahead (the user: an arrow parried toward a creeper goes to it); 128
+		// blocks out, not the game's infinity
+		Vec3d end = start.add(d.multiply(128));
 		LivingEntity best = null;
 		double bestDist = Double.MAX_VALUE;
 		Vec3d point = end;

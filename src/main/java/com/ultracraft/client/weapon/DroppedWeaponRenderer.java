@@ -83,6 +83,9 @@ public final class DroppedWeaponRenderer {
 		String n = mesh.toLowerCase();
 		if (n.contains("arm")) return true;
 		if (n.startsWith("monitor")) return true;
+		// the nailgun's "Barrel_x (1)" heat shells (Basic Color - Orange at _Color.a = heat): a dropped gun is cold
+		// (drawn whole they were red barrels: user)
+		if (kind == WeaponKind.NAILGUN && !alt && mesh.endsWith("(1)")) return true;
 		if (n.startsWith("chainsaw")) return !(kind == WeaponKind.SHOTGUN && !alt && variation == 2);
 		return false;
 	}

@@ -7,23 +7,24 @@ import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * ULTRAKILL's controls (InputActions): Shift dash, Ctrl slide, F punch, G change fist, R whiplash, E next
- * variation, Q previous variation / last weapon, 1-5 weapons (the Minecraft hotbar keys), Tab stats.
+ * ULTRAKILL's controls (InputActions), on the user's defaults: dash and slide on Minecraft's sprint and sneak keys,
+ * mouse 4 (back) punch, G change fist, mouse 5 (forward) whiplash, C next variation, R last weapon, the hotbar keys
+ * for the weapons.
  * Key state is polled straight from GLFW at the start of every client tick (`press`/`held`), the way
  * ULTRAKILL's `WasPerformedThisFrame` / `IsPressed` work, so a tap between ticks is never lost.
  */
 public final class UKKeys {
 	private static final String CATEGORY = "category.ultracraft";
 	// Dash and slide / slam are Minecraft's own sprint and sneak keys (read directly, see tick()). The ULTRAKILL-only
-	// actions sit on keys vanilla leaves free, so no vanilla binding is ever changed.
-	public static final KeyBinding punch = new KeyBinding("key.ultracraft.punch", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY);
+	// actions sit on keys vanilla leaves free; the one exception is creative's save-hotbar key, moved from C to B for
+	// next variation (ControlDefaults).
+	public static final KeyBinding punch = new KeyBinding("key.ultracraft.punch", InputUtil.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_4, CATEGORY);
 	public static final KeyBinding changeFist = new KeyBinding("key.ultracraft.change_fist", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY);
-	public static final KeyBinding hook = new KeyBinding("key.ultracraft.hook", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
-	public static final KeyBinding nextVariation = new KeyBinding("key.ultracraft.next_variation", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY);
-	public static final KeyBinding prevVariation = new KeyBinding("key.ultracraft.prev_variation", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_N, CATEGORY);
-	public static final KeyBinding stats = new KeyBinding("key.ultracraft.stats", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_H, CATEGORY);
+	public static final KeyBinding hook = new KeyBinding("key.ultracraft.hook", InputUtil.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_5, CATEGORY);
+	public static final KeyBinding nextVariation = new KeyBinding("key.ultracraft.next_variation", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_C, CATEGORY);
+	public static final KeyBinding lastWeapon = new KeyBinding("key.ultracraft.last_weapon", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
 
-	public static final KeyBinding[] ALL = {punch, changeFist, hook, nextVariation, prevVariation, stats};
+	public static final KeyBinding[] ALL = {punch, changeFist, hook, nextVariation, lastWeapon};
 
 	/** Edge-detected press this tick (true for exactly one tick per press). */
 	public static final class Key {
@@ -69,7 +70,7 @@ public final class UKKeys {
 	}
 
 	private static Key[] tracked() {
-		return JUMP == null ? KEYS : new Key[] {PUNCH, CHANGE_FIST, HOOK, NEXT_VAR, PREV_VAR, STATS, JUMP, FORWARD, BACK, LEFT, RIGHT, ATTACK, USE, DASH, SLIDE};
+		return JUMP == null ? KEYS : new Key[] {PUNCH, CHANGE_FIST, HOOK, NEXT_VAR, LAST_WEAPON, JUMP, FORWARD, BACK, LEFT, RIGHT, ATTACK, USE, DASH, SLIDE};
 	}
 
 	/** Raw mouse button event (Forge InputEvent.MouseButton.Pre). */
@@ -84,7 +85,7 @@ public final class UKKeys {
 	}
 
 	public static final Key PUNCH = new Key(punch), CHANGE_FIST = new Key(changeFist),
-		HOOK = new Key(hook), NEXT_VAR = new Key(nextVariation), PREV_VAR = new Key(prevVariation), STATS = new Key(stats);
+		HOOK = new Key(hook), NEXT_VAR = new Key(nextVariation), LAST_WEAPON = new Key(lastWeapon);
 	/** Vanilla keys read the same way, so movement never sees Minecraft's sneak/sprint handling. DASH = sprint, SLIDE = sneak. */
 	public static Key JUMP, FORWARD, BACK, LEFT, RIGHT, ATTACK, USE, DASH, SLIDE;
 	/**
@@ -95,7 +96,7 @@ public final class UKKeys {
 	public static boolean sameSlotPress;
 	private static boolean sameSlotEvent;
 
-	private static final Key[] KEYS = {PUNCH, CHANGE_FIST, HOOK, NEXT_VAR, PREV_VAR, STATS};
+	private static final Key[] KEYS = {PUNCH, CHANGE_FIST, HOOK, NEXT_VAR, LAST_WEAPON};
 
 	private UKKeys() {}
 

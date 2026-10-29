@@ -19,8 +19,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-WORK = os.path.join(ROOT, "work", "assets")
-RES = os.path.join(ROOT, "src", "main", "resources", "assets", "ultracraft")
+# (the setup builds into its own work and output folders: UK_WORK, UK_RES; ffmpeg from UK_FFMPEG)
+WORK = os.environ.get("UK_WORK") or os.path.join(ROOT, "work", "assets")
+RES = os.environ.get("UK_RES") or os.path.join(ROOT, "src", "main", "resources", "assets", "ultracraft")
+FFMPEG = os.environ.get("UK_FFMPEG") or shutil.which("ffmpeg")
 PY = sys.executable
 
 RIGS = {
@@ -59,6 +61,9 @@ MESHES = {
     # the Terminal (Shop.prefab: ShopTerminal + its drawer; ShopTerminalProxy is the shadow stand-in, hidden in the mod)
     "shop_terminal": "Assets/Prefabs/Levels/Shop.prefab",
 }
+# ProBuilder parts left out of a mesh (export_mesh --skip): the saw's hub cylinder is drawn by ProjectileRenderer.hub,
+# and the launched chainsaw is drawn without the Cube body (as tested before export_mesh learnt ProBuilder)
+MESH_SKIP = {"proj_sawblade": "Cylinder", "proj_chainsaw": "Cube"}
 TEXTURE_PREFIXES = ["Assets/Models/V1/", "Assets/Models/Weapons/", "Assets/Textures/UI/", "Assets/Textures/Revolver/", "Assets/Textures/smokesprite.png", "Assets/Textures/Dev/BonusWhite.jpg",
                     "Assets/Textures/Sprites/", "Assets/Textures/Arms/",
                     # projectile / effect materials
@@ -110,9 +115,9 @@ FONTS = ["Assets/Fonts/VCR_OSD_MONO_1.001.ttf", "Assets/Fonts/Terminal/fs-tahoma
 def export_all():
     run(os.path.join(HERE, "export_fonts.py"), os.path.join(WORK, "fonts"), *FONTS)
     for name, key in MESHES.items():
-        run(os.path.join(HERE, "export_mesh.py"), key, os.path.join(WORK, "rigs", name + ".json"))
+        run(os.path.join(HERE, "export_mesh.py"), key, os.path.join(WORK, "rigs", name + ".json"), *(["--skip", MESH_SKIP[name]] if name in MESH_SKIP else []))
     run(os.path.join(HERE, "export_textures.py"), WORK, *TEXTURE_PREFIXES)
-    run(os.path.join(HERE, "export_sounds.py"), os.path.join(WORK, "sounds"), *SOUND_PREFIXES)
+    run(os.path.join(HERE, "export_sounds.py"), os.path.join(WORK, "sounds"), *SOUND_PREFIXES, *(["--ffmpeg", FFMPEG] if FFMPEG else []))
     # the Terminal's screen: the Shop prefab's canvas as a layout JSON + its sprites
     run(os.path.join(HERE, "export_canvas.py"), "Assets/Prefabs/Levels/Shop.prefab", "Shop", "Canvas",
         os.path.join(WORK, "shop", "shop_canvas.json"), os.path.join(WORK, "shop", "sprites"))
@@ -363,7 +368,7 @@ def layout():
                 events[ev] = {"sounds": [{"name": "ultracraft:uk/" + folder + "/" + stem, "stream": False}]}
     # Minecraft caps pitch at 2: the clips the game plays higher get a copy an octave up (<stem>_x2), which
     # UKSound plays at half the pitch
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = FFMPEG
     for rel in PITCH_UP:
         src = os.path.join(snd_dst, rel + ".ogg")
         if not os.path.isfile(src) or not ffmpeg:
@@ -371,8 +376,7 @@ def layout():
             continue
         dst = os.path.join(snd_dst, rel + "_x2.ogg")
         if not os.path.isfile(dst):
-            rate = subprocess.run([shutil.which("ffprobe") or "ffprobe", "-v", "error", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", src],
-                                  capture_output=True, text=True).stdout.strip().splitlines()[0]
+            rate = ogg_rate(src)
             subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", src, "-af", f"asetrate={int(rate) * 2},aresample={rate}", "-c:a", "libvorbis", "-q:a", "5", dst], check=True)
         folder, stem = os.path.dirname(rel), os.path.basename(rel)
         events["uk." + folder.replace("/", ".") + "." + stem + "_x2"] = {"sounds": [{"name": "ultracraft:uk/" + rel + "_x2", "stream": False}]}
@@ -384,8 +388,7 @@ def layout():
         for div in (2, 4):
             dst = os.path.join(snd_dst, rel + f"_d{div}.ogg")
             if not os.path.isfile(dst):
-                rate = subprocess.run([shutil.which("ffprobe") or "ffprobe", "-v", "error", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", src],
-                                      capture_output=True, text=True).stdout.strip().splitlines()[0]
+                rate = ogg_rate(src)
                 subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", src, "-af", f"asetrate={int(rate) // div},aresample={rate}", "-c:a", "libvorbis", "-q:a", "5", dst], check=True)
             folder, stem = os.path.dirname(rel), os.path.basename(rel)
             events["uk." + folder.replace("/", ".") + "." + stem + f"_d{div}"] = {"sounds": [{"name": "ultracraft:uk/" + rel + f"_d{div}", "stream": False}]}
@@ -413,6 +416,14 @@ def layout():
 # AudioSource linear rolloff ranges (maxDistance in u x 1.8 / 3.5 blocks per u): FireSimple's FireSmall carries 100 u
 # and the grapple point's hum 35 u (played from its octave-down copy)
 ATTENUATION = {"uk.environment.firesmall": 51, "uk.environment.checkpointambiance_d2": 18}
+
+
+def ogg_rate(path):
+    """The sample rate from an Ogg Vorbis file's identification header."""
+    with open(path, "rb") as fh:
+        head = fh.read(256)
+    i = head.find(b"vorbis")
+    return int.from_bytes(head[i + 11:i + 15], "little")
 
 
 def ogg_channels(path):
@@ -460,7 +471,9 @@ PITCH_UP = ["ui/bell_10_b", "weapons/harpoonpierce", "weapons/revolver/click", "
             # NewMovement.CheckForGasoline: the oil slide loop at 1.75-2.75
             "movement/oilslide",
             # GunControl's AudioSource on every weapon / variant switch: pitch 3
-            "impacts/impacts_simple_003"]
+            "impacts/impacts_simple_003",
+            # RailcannonMaliciousFire: Bluezone-Autobots-shutdown-003 at pitch 3
+            "weapons/bluezone-autobots-shutdown-003"]
 # and the clips it plays lower than Minecraft's 0.5: a copy an octave down (<stem>_d2), played at twice the pitch
 # (the rocket's loop: pitch 0.5, then down to about half that with its Doppler 3 as it flies off)
 # (the grapple point's hum: 0.5, 0.25 with V1 close by, 0.75 hooked)
@@ -498,7 +511,7 @@ def export_embedded_sounds():
     except ImportError as e:
         print("embedded sounds not exported:", e)
         return
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = FFMPEG
     for key, name, rel in EMBEDDED_SOUNDS:
         ogg = os.path.join(WORK, "sounds", "Assets", "Sounds", rel + ".ogg")
         if os.path.exists(ogg):

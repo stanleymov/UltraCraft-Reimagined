@@ -32,6 +32,7 @@ public final class ParryWarnFx {
 		Tune.def("parry.warnSize", 1.2, "parry warning star size, blocks (by eye)");
 		Tune.def("parry.warnTime", 0.3, "parry warning star life, s (by eye; the shot comes parry.warnLead ticks after it appears)");
 		Tune.def("parry.warnMinView", 0.06, "parry warning star: at least this many blocks wide per block of distance (keeps a far one visible)");
+		Tune.def("parry.warnMaxView", 0.9, "parry warning star: at most this many blocks wide per block of distance (a creeper's star up close)");
 		Tune.def("parry.warnVolume", 0.8, "parry warning sound volume (V2Flash's AudioSource: 1)");
 	}
 
@@ -81,10 +82,13 @@ public final class ParryWarnFx {
 			Vec3d at = headPos(en, w.head, e.getPartialTick());
 			// in front of the head toward the camera, so the head does not hide it
 			Vec3d toCam = camPos.subtract(at).normalize();
-			// (out past the body's side: a ghast is 4 wide, and the star sat inside it)
-			at = at.add(toCam.multiply(en.getWidth() * 0.8 + 0.5));
-			// (never smaller on screen than parry.warnMinView blocks per block away: a far ghast's star was a dot)
-			double size = Math.max(Tune.get("parry.warnSize"), at.distanceTo(camPos) * Tune.get("parry.warnMinView"));
+			// (out past the body's side: a ghast is 4 wide, and the star sat inside it; but never more than halfway to the
+			// camera - a creeper hissing right in front of V1 had its star behind the eyes: user)
+			at = at.add(toCam.multiply(Math.min(en.getWidth() * 0.8 + 0.5, camPos.distanceTo(at) * 0.5)));
+			// (never smaller on screen than parry.warnMinView blocks per block away: a far ghast's star was a dot; nor
+			// bigger than parry.warnMaxView, so one that close does not fill the screen)
+			double dist = at.distanceTo(camPos);
+			double size = Math.min(Math.max(Tune.get("parry.warnSize"), dist * Tune.get("parry.warnMinView")), dist * Tune.get("parry.warnMaxView"));
 			float half = (float) (size * 0.5 * MathHelper.lerp((float) t, 1f, 0.5f));
 			float alpha = (float) MathHelper.lerp(t, 1, 0.3);
 			Vec3d right = toCam.crossProduct(new Vec3d(0, 1, 0));
