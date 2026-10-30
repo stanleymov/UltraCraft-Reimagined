@@ -9,32 +9,35 @@ weapon variation including ULTRAKILL's own HUD, style meter and shop, all conver
 > ULTRAKILL © New Blood Interactive. Minecraft © Mojang Studios / Microsoft. Not related to the other Minecraft mods
 > called UltraCraft.
 
-<p>
-  <img src="docs/images/screenshots/01.jpg" width="49%">
-  <img src="docs/images/screenshots/02.jpg" width="49%">
-  <img src="docs/images/screenshots/03.jpg" width="49%">
-  <img src="docs/images/screenshots/04.jpg" width="49%">
-  <img src="docs/images/screenshots/05.jpg" width="49%">
-  <img src="docs/images/screenshots/06.jpg" width="49%">
-  <img src="docs/images/screenshots/07.jpg" width="49%">
-  <img src="docs/images/screenshots/08.jpg" width="49%">
-  <img src="docs/images/screenshots/09.jpg" width="49%">
-  <img src="docs/images/screenshots/10.jpg" width="49%">
-  <img src="docs/images/screenshots/11.jpg" width="49%">
-  <img src="docs/images/screenshots/12.jpg" width="49%">
-  <img src="docs/images/screenshots/13.jpg" width="49%">
-  <img src="docs/images/screenshots/14.jpg" width="49%">
-</p>
+![The Knuckleblaster against the Ender Dragon](docs/images/knuckleblaster_dragon.jpg)
 
 ## Features
 
 - **V1's movement**: ULTRAKILL's own physics, dash, slide, slam, wall jumps and rocket riding.
 - **Every weapon and variation**, standard and alternate with their on-gun displays, coins and ricochets.
+
+![The Sawed-On shotgun over Nether lava](docs/images/sawed_on_nether.jpg)
+
+![The Marksman revolver in the Warden fight](docs/images/marksman_warden.jpg)
+
 - **Arms**: Feedbacker, Knuckleblaster and Whiplash.
+
+![A Knuckleblaster kill in a Nether fortress](docs/images/knuckleblaster_fortress.jpg)
+
+![The Whiplash in a Nether fortress](docs/images/whiplash_fortress.jpg)
+
 - **Parry System**: Parry melee hits and projectiles, with a warning star like in ULTRAKILL.
+
+![A parry on an Enderman](docs/images/parry_enderman.jpg)
+
+![A Feedbacker parry](docs/images/feedbacker_parry.jpg)
+
 - **Dual wield**: an ULTRAKILL weapon in the off-hand fires with the main one.
 - **Style meter and P**: style ranks, bonuses and freshness. P is saved after every battle and is stored in your
   Inventory.
+
+![Destructive against the Ender Dragon](docs/images/style_dragon.jpg)
+
 - **The Terminal**: a craftable shop block with ULTRAKILL's shop screen and music. Buy weapons and variations with P.
 - **Clash Mode**: V1 in third person enables Clash mode. Attack to trigger a spin that kills enemies.
 
@@ -64,13 +67,11 @@ flash, drowning, air brake, short hop ...) are under Mods > UltraCraft Reimagine
 The Terminal is the shop: walk up to it to open ULTRAKILL's shop screen, and buy weapons, their variations and the
 arms with the P you earn in fights.
 
-**Crafting recipe** (crafting table):
+![The Terminal's shop screen](docs/images/terminal_shop.jpg)
 
-| | | |
-|:-:|:-:|:-:|
-| Iron Ingot | Glass | Iron Ingot |
-| Iron Ingot | Redstone Dust | Iron Ingot |
-| Iron Ingot | Iron Ingot | Iron Ingot |
+**Crafting recipe** (crafting table): Iron Ingots all round, Glass at the top in the middle, Redstone Dust in the centre.
+
+<img src="docs/images/terminal_recipe.png" width="520" alt="The Terminal's crafting recipe">
 
 The **Grapple Orb** (a Whiplash hook point you can place) is crafted from an Ender Pearl with an Iron Ingot above, below
 and to each side; it makes 2.
@@ -115,7 +116,7 @@ please don't share it; share the setup instead.
 | `tools/extract/` | the extraction pipeline the setup runs on your ULTRAKILL install: Addressables catalog, rigs and animation clips, meshes, textures, sounds, fonts, the shop canvas |
 | `tools/re/` | scripts that read ULTRAKILL's game data and code layout to look up the game's own values |
 | `installer/` | the setup: wizard and engine (Python), launcher (Rust), package builder |
-| `docs/` | notes on ULTRAKILL's mechanics and its files, the plan, and the screenshots |
+| `docs/` | notes on ULTRAKILL's mechanics and its files, the plan, and the README's pictures |
 
 Building from source: `./gradlew build codeJar` (JDK 17). The mod needs the converted ULTRAKILL content in
 `src/main/resources/assets/ultracraft/` (git-ignored), which `tools/extract/build_assets.py` builds from an ULTRAKILL

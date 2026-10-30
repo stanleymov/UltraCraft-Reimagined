@@ -309,6 +309,8 @@ public final class ParryServer {
 		com.ultracraft.UltraCraft.LOG.info("[parry] PARRY by {} at {}{}", p.getName().getString(), at, own ? " (own shot: no heal)" : shot ? " (shooting parry)" : "");
 		// NewMovement.Parry's full heal only for parrying something hostile, not for boosting your own pellets
 		if (!own) p.setHealth(p.getMaxHealth());
+		// NewMovement.Parry: exploded = false (blast blood heals again)
+		BloodHeal.clearExploded(p);
 		// the whole game stops with the client's freeze (same live settings); only alone in the world, so a parry never
 		// stops the game for other players
 		if (ServerTune.get("parry.freezeOn", 1) != 0 && p.getServer() != null && p.getServer().getCurrentPlayerCount() <= 1)

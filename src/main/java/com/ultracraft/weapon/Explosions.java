@@ -59,7 +59,11 @@ public final class Explosions {
 		Gasoline.onExplosion(world, shooter, pos, 3);
 		// the plants in the blast go (the user's ask; no other block is touched, as in ULTRAKILL)
 		Plants.blast(world, shooter, pos, radius);
-		for (Entity e : world.getOtherEntities(null, new Box(pos, pos).expand(radius))) {
+		// the blast reaches the enemies before V1 (the user's point-blank shotgun parry: their blood heals first, then the
+		// blast hurts - 100 - 23 = 77 at full health in the game), so V1 comes last
+		java.util.List<Entity> caught = new java.util.ArrayList<>(world.getOtherEntities(null, new Box(pos, pos).expand(radius)));
+		caught.sort(java.util.Comparator.comparingInt(x -> x instanceof ServerPlayerEntity ? 1 : 0));
+		for (Entity e : caught) {
 			// an End crystal in the blast goes off
 			if (e instanceof net.minecraft.entity.decoration.EndCrystalEntity crystal) {
 				if (closestPoint(crystal.getBoundingBox(), pos).distanceTo(pos) <= radius) Damage.hitCrystal(shooter, crystal);
@@ -78,6 +82,7 @@ public final class Explosions {
 				if (hurtPlayer && dist <= radius * ServerTune.get("explosion.playerHurtOuter", 1.0))
 					hurt = dist <= radius * ServerTune.get("explosion.playerHurt", 0.5) ? spec.damage() : Math.round(spec.damage() / 1.5f);
 				if (spec.fxKind() != 3 && spec.fxKind() != 4) launchPlayer(p, pos, dist, spec, harmless, hurt);
+				if (hurt > 0 && !harmless) BloodHeal.exploded(p, hurt);
 				continue;
 			}
 			if (shooter == null) continue;

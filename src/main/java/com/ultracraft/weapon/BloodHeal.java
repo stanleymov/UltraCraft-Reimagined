@@ -20,15 +20,35 @@ import java.util.List;
  * <li>Body (a body or limb hit of 1+ or a kill; the game's Limb is 20 hp in 6 u): 10 hp, 5 u</li>
  * <li>Small (any lighter hit): 10 hp, 5 u</li>
  * </ul>
+ * Blood an explosion spilled heals nothing while V1 is "exploded" (NewMovement.GetHealth: exploded && fromExplosion):
+ * hurt by a blast, until its hurt invincibility ends (0.5 s, 0.8 s for 50+) or a parry. The blast reaches the enemies
+ * first (Explosions sorts V1 last), so their blood heals before the blast hurts.
  * V1's 100 hp is the player's 20 HP (x5).
  */
 public final class BloodHeal {
 	private BloodHeal() {}
 
 	/** A splash whose sphere is still on: who may drink it, where, how far, how much, for how many more ticks. */
-	private record Splash(ServerPlayerEntity p, Vec3d at, double radius, int hp, int[] ticks) {}
+	private record Splash(ServerPlayerEntity p, Vec3d at, double radius, int hp, boolean fromExplosion, int[] ticks) {}
 
 	private static final List<Splash> splashes = new ArrayList<>();
+	/** Per player: until when (server ticks) V1 counts as exploded. */
+	private static final java.util.Map<java.util.UUID, Integer> explodedUntil = new java.util.HashMap<>();
+
+	/** A blast hurt V1 for `hurtV1`: exploded until its hurt invincibility ends (currentColor.a: 0.5 s, 0.8 s for 50+). */
+	public static void exploded(ServerPlayerEntity p, int hurtV1) {
+		explodedUntil.put(p.getUuid(), p.getServer().getTicks() + (hurtV1 >= 50 ? 16 : 10));
+	}
+
+	/** NewMovement.Parry: exploded = false. */
+	public static void clearExploded(ServerPlayerEntity p) {
+		explodedUntil.remove(p.getUuid());
+	}
+
+	private static boolean isExploded(ServerPlayerEntity p) {
+		Integer until = explodedUntil.get(p.getUuid());
+		return until != null && p.getServer() != null && p.getServer().getTicks() < until;
+	}
 
 	public static void heal(ServerPlayerEntity p, int amountV1) {
 		float before = p.getHealth();
@@ -47,7 +67,20 @@ public final class BloodHeal {
 		boolean headBlood = hitter == HitPayload.HAMMER || (head && full);
 		int hp = headBlood ? 30 : 10;
 		double radiusU = headBlood ? 7 : 5;
-		splashes.add(new Splash(shooter, at, radiusU * Damage.SCALE_BLOCKS, hp, new int[] {5}));
+		boolean fromExplosion = hitter == HitPayload.EXPLOSION || hitter == Damage.PARRIED_BLAST || hitter == Damage.ROCKET_BLAST;
+		Splash s = new Splash(shooter, at, radiusU * Damage.SCALE_BLOCKS, hp, fromExplosion, new int[] {5});
+		// (a blast's blood is checked at once, before the same blast reaches V1)
+		if (!(fromExplosion && drink(s))) splashes.add(s);
+	}
+
+	/** True if `s` healed its player now (V1 inside its sphere and, for blast blood, not exploded). */
+	private static boolean drink(Splash s) {
+		if (s.fromExplosion && isExploded(s.p)) return false;
+		Box b = s.p.getBoundingBox();
+		Vec3d c = new Vec3d(Math.max(b.minX, Math.min(b.maxX, s.at.x)), Math.max(b.minY, Math.min(b.maxY, s.at.y)), Math.max(b.minZ, Math.min(b.maxZ, s.at.z)));
+		if (c.distanceTo(s.at) > s.radius) return false;
+		heal(s.p, s.hp);
+		return true;
 	}
 
 	/** Server tick: a splash heals the first time its player is inside its sphere, for 0.25 s (5 ticks). */
@@ -55,14 +88,7 @@ public final class BloodHeal {
 		for (Iterator<Splash> it = splashes.iterator(); it.hasNext(); ) {
 			Splash s = it.next();
 			if (s.p.isRemoved() || !s.p.isAlive()) { it.remove(); continue; }
-			Box b = s.p.getBoundingBox();
-			Vec3d c = new Vec3d(Math.max(b.minX, Math.min(b.maxX, s.at.x)), Math.max(b.minY, Math.min(b.maxY, s.at.y)), Math.max(b.minZ, Math.min(b.maxZ, s.at.z)));
-			if (c.distanceTo(s.at) <= s.radius) {
-				heal(s.p, s.hp);
-				it.remove();
-				continue;
-			}
-			if (--s.ticks[0] <= 0) it.remove();
+			if (drink(s) || --s.ticks[0] <= 0) it.remove();
 		}
 	}
 }
