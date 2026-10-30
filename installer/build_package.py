@@ -115,6 +115,12 @@ def payload():
         bad = [n for n in res if n not in ours]
         if bad:
             raise SystemExit(f"the code jar holds files that are not our tracked resources: {bad[:5]}")
+        # every mixin config's refmap must be in the jar, or the mixins fail outside the dev run ("No refMap loaded")
+        names = set(z.namelist())
+        for cfg in [n for n in names if n.endswith(".mixins.json")]:
+            refmap = json.loads(z.read(cfg)).get("refmap")
+            if refmap and refmap not in names:
+                raise SystemExit(f"{cfg} names {refmap}, which is not in the code jar")
     shutil.copy2(jar, p / jar.name)
 
 

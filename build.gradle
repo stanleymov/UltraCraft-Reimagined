@@ -7,6 +7,9 @@ group = project.maven_group
 base { archivesName = project.archives_base_name }
 
 loom {
+    // the mixin configs name this refmap; without it the name follows the jar's (UltraCraft-Reimagined), which they
+    // don't find ("No refMap loaded": every mixin by an obfuscated name fails outside the dev run)
+    mixin { defaultRefmapName = "UltraCraft-refmap.json" }
     forge {
         mixinConfig "ultracraft.mixins.json"
         mixinConfig "ultracraft.client.mixins.json"
