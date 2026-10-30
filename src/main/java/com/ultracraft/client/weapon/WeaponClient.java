@@ -496,6 +496,10 @@ public final class WeaponClient {
 		// Revolver Beam Sharp (Sharpshooter) the red-orange 'muzzleflashnailgun' star and a (1, 0.235, 0.235) light
 		boolean altRig = RevolverItem.alternate(held);
 		boolean superBeam = shotType == 2 && variation == 0, sharpBeam = shotType == 2 && variation == 2;
+		// a Sharpshooter shot fired mid-twirl: the game shoots from the barrel wherever the spin has it, but our closer gun
+		// swings the barrel up to the camera, where the star landed at the screen's edge, away from the gun (user). The
+		// spin ends at the shot instead, so the star and the beam leave the barrel where the gun is seen
+		if (sharpBeam && (twirlRecovery || chargingPierce)) endTwirl();
 		GunDisplays.flash(altRig ? "revolver_alt" : "revolver", altRig ? "Armature/Upper Arm/Forearm/Hand/Revolver_Bone/ShootPoint (1)" : "Armature/Upper Arm/Forearm/Hand/Revolver_Bone/ShootPoint",
 			superBeam ? "muzzleflashblue" : sharpBeam ? "muzzleflashnailgun" : "muzzleflash",
 			(float) (Tune.get("view.revFlashSize") * (altRig && shotType == 1 ? Tune.get("view.altFlashSize") : !altRig ? Tune.get("view.mainFlashSize") : 1)),

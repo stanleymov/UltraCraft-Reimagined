@@ -266,9 +266,12 @@ public final class Damage {
 		// min(amount, 1) (EnderDragonEntity.damagePart); without a point, the body
 		// (a boss keeps its velocity: Minecraft's 0.4 hit knockback, every hit, made the Wither twitch in the air)
 		Vec3d keepVel = p != null && p.boss() ? target.getVelocity() : null;
+		boolean wasAlive = target.isAlive();
 		if (target instanceof EnderDragonEntity dragon && point != null) dragon.damagePart(nearestPart(dragon, point), src, amount);
 		else target.damage(src, amount);
 		if (keepVel != null) target.setVelocity(keepVel);
+		// the blood it leaves heals V1 close by (Bloodsplatter: its sphere is on for 0.25 s)
+		BloodHeal.onHit(shooter, target, points, hitter, point, wasAlive && !target.isAlive());
 		if (target instanceof net.minecraft.entity.mob.ZombifiedPiglinEntity zp) angerZombifiedPiglins(shooter, zp);
 		if (debug) com.ultracraft.UltraCraft.LOG.info("[damage] {} {} pts={} hitter={} -> {} hp (armour x{}), health now {}", target.getType().getUntranslatedName(),
 			p == null ? "normal" : p.key(), points, hitter, amount, String.format("%.3f", armorFactor(target)), target.getHealth());

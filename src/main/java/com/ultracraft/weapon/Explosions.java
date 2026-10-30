@@ -49,7 +49,7 @@ public final class Explosions {
 		explode(world, shooter, pos, spec, harmless, true, hitterWeapon, source);
 	}
 
-	/** @param hurtPlayer false: V1 is only pushed (boosted pellets going off at arm's length) */
+	/** @param hurtPlayer false: V1 is only pushed (parried projectiles, the parried sonic boom and creeper blast) */
 	public static void explode(ServerWorld world, ServerPlayerEntity shooter, Vec3d pos, Spec spec, boolean harmless, boolean hurtPlayer, String hitterWeapon, Entity source) {
 		double radius = spec.maxSize() * Damage.SCALE_BLOCKS;
 		double half = radius / 2;
@@ -70,10 +70,14 @@ public final class Explosions {
 			double dist = closest.distanceTo(pos);
 			if (dist > radius) continue;
 			if (living instanceof ServerPlayerEntity p) {
-				// (V1 is hurt only within explosion.playerHurt of the radius, pushed out to all of it: the user took
-				// damage far off - a rocket on a hopping mob is the 6-block super explosion)
-				boolean near = dist <= radius * ServerTune.get("explosion.playerHurt", 0.5);
-				if (spec.fxKind() != 3 && spec.fxKind() != 4) launchPlayer(p, pos, dist, spec, harmless, hurtPlayer && near);
+				// Explosion.FixedUpdate: the sphere grows to maxSize; past half of it the damage is RoundToInt(damage / 1.5)
+				// (35 -> 23, 50 -> 33; the user measured about 22 at the edge), and it is harmless once full grown. So V1
+				// takes the whole damage within explosion.playerHurt (0.5) of the radius, the cut one out to
+				// explosion.playerHurtOuter (1: all of it), and is pushed by all of it either way
+				int hurt = 0;
+				if (hurtPlayer && dist <= radius * ServerTune.get("explosion.playerHurtOuter", 1.0))
+					hurt = dist <= radius * ServerTune.get("explosion.playerHurt", 0.5) ? spec.damage() : Math.round(spec.damage() / 1.5f);
+				if (spec.fxKind() != 3 && spec.fxKind() != 4) launchPlayer(p, pos, dist, spec, harmless, hurt);
 				continue;
 			}
 			if (shooter == null) continue;
@@ -91,9 +95,9 @@ public final class Explosions {
 	}
 
 	/** Explosion.Collide's player branch → LaunchFromPoint on the client (V1 owns its velocity). */
-	private static void launchPlayer(ServerPlayerEntity p, Vec3d pos, double dist, Spec spec, boolean harmless, boolean hurtPlayer) {
+	private static void launchPlayer(ServerPlayerEntity p, Vec3d pos, double dist, Spec spec, boolean harmless, int hurt) {
 		int strength = 200;
-		if (!hurtPlayer && !harmless) {
+		if (hurt <= 0 && !harmless) {
 			Net.toPlayer(p, new LaunchPayload(pos, strength, spec.maxSize(), 0, false));
 			return;
 		}
@@ -105,7 +109,6 @@ public final class Explosions {
 			Net.toPlayer(p, new LaunchPayload(pos, 100, 8 * scale, 0, true));
 			return;
 		}
-		int hurt = spec.damage();
 		Net.toPlayer(p, new LaunchPayload(pos, strength, spec.maxSize(), hurt, false));
 		if (hurt > 0) {
 			// 35 V1 hp = 7 HP; GetHurt(…, explosion) with its invincibility window

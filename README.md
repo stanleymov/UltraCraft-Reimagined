@@ -1,8 +1,7 @@
 # UltraCraft Reimagined
 
-ULTRAKILL inside Minecraft (Forge 1.20.1): you play as V1, with ULTRAKILL's own movement, weapons and every
-variation, arms, parries, style meter and shop, its first-person animations, sounds and HUD, converted from your own
-copy of ULTRAKILL.
+ULTRAKILL inside Minecraft (Forge 1.20.1): you play as V1, with ULTRAKILL's own movement, animations, weapons and every
+weapon variation including ULTRAKILL's own HUD, style meter and shop, all converted from your own copy of ULTRAKILL.
 
 > **In beta testing.** No release yet: the setup is built and the first release follows the beta.
 
@@ -10,26 +9,71 @@ copy of ULTRAKILL.
 > ULTRAKILL © New Blood Interactive. Minecraft © Mojang Studios / Microsoft. Not related to the other Minecraft mods
 > called UltraCraft.
 
-## What's in
+<p>
+  <img src="docs/images/screenshots/01.jpg" width="49%">
+  <img src="docs/images/screenshots/02.jpg" width="49%">
+  <img src="docs/images/screenshots/03.jpg" width="49%">
+  <img src="docs/images/screenshots/04.jpg" width="49%">
+  <img src="docs/images/screenshots/05.jpg" width="49%">
+  <img src="docs/images/screenshots/06.jpg" width="49%">
+  <img src="docs/images/screenshots/07.jpg" width="49%">
+  <img src="docs/images/screenshots/08.jpg" width="49%">
+  <img src="docs/images/screenshots/09.jpg" width="49%">
+  <img src="docs/images/screenshots/10.jpg" width="49%">
+  <img src="docs/images/screenshots/11.jpg" width="49%">
+  <img src="docs/images/screenshots/12.jpg" width="49%">
+  <img src="docs/images/screenshots/13.jpg" width="49%">
+  <img src="docs/images/screenshots/14.jpg" width="49%">
+</p>
 
-- **V1's movement**: ULTRAKILL's physics (0.008 s steps), dash with stamina, slide (low enough to slide under a block),
-  slam with its shockwave, wall jumps and wall cling, slide and slam jumps, rocket riding. Optional: an air brake to land
-  on a single block, and a short hop.
-- **Every weapon and variation**, standard and alternate: revolvers (Piercer, Marksman, Sharpshooter), shotguns and the
-  Jackhammer (Core Eject, Pump Charge, Sawed-On), nailguns and sawblade launchers (Attractor, Overheat, Jump Start),
-  railcannons (Electric, Screwdriver, Malicious) and rocket launchers (Freezeframe, S.R.S. Cannon, Firestarter), with
-  their on-gun displays, coins and ricochets.
-- **Arms**: the Feedbacker (parries, projectile boosts), the Knuckleblaster and the Whiplash.
-- **Parrying** melee hits and projectiles, with a warning star before a ranged mob's parryable shot.
-- **Dual wield**: an ULTRAKILL weapon in the off-hand fires with the main one, mirrored like ULTRAKILL's dual wield.
-- **Style meter and P**: style ranks, bonuses and freshness; points bank into P when a fight ends.
-- **The Terminal**: a craftable shop block with ULTRAKILL's shop screen, music and arm, to buy weapons and variations
-  with P.
-- **Fire**: gasoline, the Firestarter and the Malicious railcannon set the world on fire; shots burn through leaves and
-  plants.
-- **Damage tuned to Minecraft**: armour by piece and material, big mobs and bosses on ULTRAKILL enemies' health and
-  weaknesses (the Warden, the Wither and the Ender Dragon), boss kill rewards.
-- **Third person** shows V1 itself.
+## Features
+
+- **V1's movement**: ULTRAKILL's own physics, dash, slide, slam, wall jumps and rocket riding.
+- **Every weapon and variation**, standard and alternate with their on-gun displays, coins and ricochets.
+- **Arms**: Feedbacker, Knuckleblaster and Whiplash.
+- **Parry System**: Parry melee hits and projectiles, with a warning star like in ULTRAKILL.
+- **Dual wield**: an ULTRAKILL weapon in the off-hand fires with the main one.
+- **Style meter and P**: style ranks, bonuses and freshness. P is saved after every battle and is stored in your
+  Inventory.
+- **The Terminal**: a craftable shop block with ULTRAKILL's shop screen and music. Buy weapons and variations with P.
+- **Clash Mode**: V1 in third person enables Clash mode. Attack to trigger a spin that kills enemies.
+
+## Controls
+
+| Action | Key |
+|---|---|
+| Move / jump | WASD / Space |
+| Dash | Sprint key (Left Ctrl) |
+| Slide | Sneak key (Left Shift) on the ground |
+| Ground slam | Sneak key (Left Shift) in the air |
+| Fire | Left mouse button |
+| Alternate fire (charge, zoom, throw a coin ...) | Right mouse button |
+| Punch (and parry) | Mouse button 4 (back) |
+| Whiplash | Mouse button 5 (forward) |
+| Change arm (Feedbacker / Knuckleblaster) | G |
+| Next variation | C, or press the weapon's number key again |
+| Last weapon | R |
+| Weapons | Hotbar 1-9: every weapon is an item |
+| Clash Mode | F5 (third person) |
+
+Change them under Options > Controls > Key Binds > UltraCraft Reimagined. The mod's own settings (speedometer, parry
+flash, drowning, air brake, short hop ...) are under Mods > UltraCraft Reimagined > Config.
+
+## The Terminal
+
+The Terminal is the shop: walk up to it to open ULTRAKILL's shop screen, and buy weapons, their variations and the
+arms with the P you earn in fights.
+
+**Crafting recipe** (crafting table):
+
+| | | |
+|:-:|:-:|:-:|
+| Iron Ingot | Glass | Iron Ingot |
+| Iron Ingot | Redstone Dust | Iron Ingot |
+| Iron Ingot | Iron Ingot | Iron Ingot |
+
+The **Grapple Orb** (a Whiplash hook point you can place) is crafted from an Ender Pearl with an Iron Ingot above, below
+and to each side; it makes 2.
 
 ## Installing
 
@@ -47,10 +91,6 @@ You need **ULTRAKILL** (Steam; the base game, no DLC needed), **Minecraft Java E
 The setup is also the updater: run a newer one over your install. When an update brings no new ULTRAKILL files, it
 only replaces the code and doesn't need ULTRAKILL.
 
-Keys: sprint = dash, sneak = slide (ground slam in the air), mouse back = punch, mouse forward = whiplash, G = change
-arm, C = next variation (or press the weapon's number key again), R = last weapon. Craft a Terminal to buy weapons,
-variations and arms with P.
-
 ## No game files here: bring your own
 
 This repository and the setup hold **code only**: no ULTRAKILL files and nothing converted from them. The setup builds
@@ -63,8 +103,9 @@ please don't share it; share the setup instead.
 
 - **No generative AI was used for any visual or audio asset.** Every model, animation, texture, sound and HUD element
   in UltraCraft Reimagined is ULTRAKILL's own, converted from your own install.
-- **The code and this description were written with [Claude Code](https://claude.com/claude-code)** (Anthropic),
-  under the author's direction, and go through intensive human testing and tuning.
+- **The code and this description were written with [Claude Code](https://claude.com/claude-code)** (Anthropic), under
+  the author's direction, and went through intensive human testing and tuning. This is not just "Put Ultrakill in
+  Minecraft" It's a mod that took a month of 10 hour work days to get this working as intended
 
 ## What's in here
 
@@ -74,7 +115,7 @@ please don't share it; share the setup instead.
 | `tools/extract/` | the extraction pipeline the setup runs on your ULTRAKILL install: Addressables catalog, rigs and animation clips, meshes, textures, sounds, fonts, the shop canvas |
 | `tools/re/` | scripts that read ULTRAKILL's game data and code layout to look up the game's own values |
 | `installer/` | the setup: wizard and engine (Python), launcher (Rust), package builder |
-| `docs/` | notes on ULTRAKILL's mechanics and its files, and the plan |
+| `docs/` | notes on ULTRAKILL's mechanics and its files, the plan, and the screenshots |
 
 Building from source: `./gradlew build codeJar` (JDK 17). The mod needs the converted ULTRAKILL content in
 `src/main/resources/assets/ultracraft/` (git-ignored), which `tools/extract/build_assets.py` builds from an ULTRAKILL

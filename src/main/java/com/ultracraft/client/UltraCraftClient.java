@@ -96,16 +96,20 @@ public final class UltraCraftClient {
 				Tune.poll();
 				UKKeys.tick(client);
 				com.ultracraft.client.weapon.WorldUse.tick(client);
-				WeaponClient.INSTANCE.tick(client);
+				// Minecraft keeps ticking the client under the pause menu (only the world stops): the game's clock-driven
+				// state - weapon charges (the Sharpshooter's three came back while paused: user), the style meter, the
+				// chainsaw / nails / rockets - waits, as ULTRAKILL's does at timeScale 0
+				boolean paused = client.isPaused();
+				if (!paused) WeaponClient.INSTANCE.tick(client);
 				com.ultracraft.client.shop.ShopMode.tick(client);
-				com.ultracraft.client.weapon.ChainsawFx.tick(client);
-				com.ultracraft.client.weapon.NailGhosts.tick(client);
-				com.ultracraft.client.weapon.RocketSounds.tick(client);
+				if (!paused) com.ultracraft.client.weapon.ChainsawFx.tick(client);
+				if (!paused) com.ultracraft.client.weapon.NailGhosts.tick(client);
+				if (!paused) com.ultracraft.client.weapon.RocketSounds.tick(client);
 				com.ultracraft.client.v1.UnderwaterFx.tick();
 				com.ultracraft.client.v1.UnderwaterAudio.tick();
 				com.ultracraft.client.weapon.GasolineClient.tick(client);
 				com.ultracraft.client.weapon.GrappleOrbRenderer.tick(client);
-				StyleState.INSTANCE.tick(client);
+				if (!paused) StyleState.INSTANCE.tick(client);
 			}
 		});
 		bus.addListener((net.minecraftforge.client.event.InputEvent.Key e) -> UKKeys.onKey(MinecraftClient.getInstance(), e.getKey(), e.getScanCode(), e.getAction()));
@@ -158,6 +162,7 @@ public final class UltraCraftClient {
 		bus.addListener((TickEvent.ClientTickEvent e) -> {
 			if (e.phase != TickEvent.Phase.END) return;
 			MinecraftClient mc = MinecraftClient.getInstance();
+			if (mc.isPaused()) return;
 			com.ultracraft.client.weapon.ZapperClient.INSTANCE.tick(mc);
 			// (the off-hand zapper's shock goes to the server as the off-hand weapon's)
 			com.ultracraft.client.weapon.OffhandGun.run(mc.player, () -> com.ultracraft.client.weapon.ZapperClient.OFF.tick(mc));

@@ -30,7 +30,7 @@ import java.util.Random;
  */
 public final class BloodFx {
 	private static final Identifier DROP = new Identifier(UltraCraft.MOD_ID, "textures/uk/blooddrop.png");
-	private static final double COUNT = Tune.def("fx.bloodDrops", 14, "blood drops per hit (BS Body Small emits a 25° cone burst)");
+	private static final double COUNT = Tune.def("fx.bloodDrops", 42, "blood drops per hit (BS Body Small emits a 25° cone burst; x3 the old 14 by the user)");
 	private static final double SPEED = Tune.def("fx.bloodSpeed", 9, "blood drop start speed, u/s");
 	private static final double SIZE = Tune.def("fx.bloodSize", 0.22, "blood drop quad size, u");
 	private static final double STAIN_LIFE = Tune.def("fx.bloodStainLife", 40, "seconds a blood stain stays");
@@ -71,7 +71,7 @@ public final class BloodFx {
 			d.size = (float) (Tune.get("fx.bloodSize") * s * (0.6 + rnd.nextDouble() * 0.8));
 			drops.add(d);
 		}
-		if (drops.size() > 600) drops.subList(0, drops.size() - 600).clear();
+		if (drops.size() > 1800) drops.subList(0, drops.size() - 1800).clear();
 	}
 
 	public static void clear() {

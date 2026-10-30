@@ -1585,7 +1585,7 @@ public class UKProjectileEntity extends Entity {
 		boolean head = com.ultracraft.weapon.Hitscan.isHeadshot(target, point, getPos(), dir);
 		switch (k) {
 			case PELLET -> {
-				if (isBoosted()) { Explosions.explode(world, sh, point, Explosions.PARRIED, false, false, "shotgun0", this); return; }
+				if (isBoosted()) { Explosions.explode(world, sh, point, Explosions.PARRIED, false, "shotgun0", this); return; } // (hurts V1 near it: 35)
 				deal(sh, target, damage, dir, 1000f, HitPayload.SHOTGUN, head, point);
 				discard();
 			}
@@ -1621,6 +1621,8 @@ public class UKProjectileEntity extends Entity {
 			case ROCKET -> {
 				// Grenade.Collision: airborne / fresh / levelled-up target → super explosion
 				boolean sup = levelledUp || !target.isOnGround();
+				// Grenade.Collision: on an enemy the full explosion, which hurts V1 close by (35, the user's check of the game);
+				// only on a wall or the ground the harmless one that just pushes
 				Explosions.explode(world, sh, point, (sup ? Explosions.SUPER : Explosions.NORMAL).scaled(rocketBlastScale()), false, "rocket0", this);
 			}
 			case CANNONBALL -> {
@@ -1701,7 +1703,8 @@ public class UKProjectileEntity extends Entity {
 	}
 
 	private void onHitBlock(ServerWorld world, ServerPlayerEntity sh, ProjectileKind k, BlockHitResult block, Vec3d v) {
-		if (k == ProjectileKind.PELLET && isBoosted()) { Explosions.explode(world, sh, block.getPos(), Explosions.PARRIED, false, false, "shotgun0", this); return; }
+		// a punched pellet's blast hurts V1 near it (35), like the Core Eject's (the user's check of the game)
+		if (k == ProjectileKind.PELLET && isBoosted()) { Explosions.explode(world, sh, block.getPos(), Explosions.PARRIED, false, "shotgun0", this); return; }
 		Vec3d p = block.getPos();
 		switch (k) {
 			case CORE -> Explosions.explode(world, sh, p, Explosions.NORMAL, false, "shotgun0", this);
@@ -1794,7 +1797,8 @@ public class UKProjectileEntity extends Entity {
 			setPosition(host.getPos().add(stuckOffset));
 		}
 		if (k == ProjectileKind.SCREWDRIVER && host instanceof LivingEntity target) {
-			// Harpoon.FixedUpdate: 0.0625 every 0.05 s while drilling, 116 hits; the blood heals the driller
+			// Harpoon.FixedUpdate: 0.0625 every 0.05 s while drilling, 116 hits; each one's blood heals the driller close by
+			// (Damage.deal → BloodHeal)
 			drillCooldown -= DT;
 			ServerPlayerEntity sh = shooter();
 			while (drillCooldown <= 0 && drillHitsLeft > 0 && sh != null && target.isAlive()) {
@@ -1803,7 +1807,6 @@ public class UKProjectileEntity extends Entity {
 				boolean wasAlive = target.isAlive();
 				Damage.deal(sh, target, 0.0625f, Vec3d.ZERO, 0f, HitPayload.DRILL);
 				if (wasAlive && !target.isAlive()) Net.toNear(world, getPos(), new HitPayload(HitPayload.KILL, HitPayload.DRILL, 0, Damage.flags(target), getPos()));
-				if (sh.squaredDistanceTo(this) < 100) com.ultracraft.weapon.BloodHeal.heal(sh, 1);
 			}
 			if (drillHitsLeft <= 0) discard();
 		}

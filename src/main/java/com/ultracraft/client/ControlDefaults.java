@@ -52,6 +52,22 @@ public final class ControlDefaults {
 				UltraCraft.LOG.warn("could not write {}", controls, e);
 			}
 		}
+		// Minecraft's view bobbing (on by default) stacks on V1's own walking bob (WalkingBob): off once per install (marker
+		// config/ultracraft-viewbob), so a player who turns it back on keeps it (user)
+		Path viewBob = client.runDirectory.toPath().resolve("config").resolve("ultracraft-viewbob");
+		if (!Files.exists(viewBob)) {
+			if (o.getBobView().getValue()) {
+				o.getBobView().setValue(false);
+				o.write();
+				UltraCraft.LOG.info("Turned Minecraft's view bobbing off (V1 has its own)");
+			}
+			try {
+				Files.createDirectories(viewBob.getParent());
+				Files.writeString(viewBob, "UltraCraft Reimagined turned view bobbing off once; delete to do it again\n");
+			} catch (IOException e) {
+				UltraCraft.LOG.warn("could not write {}", viewBob, e);
+			}
+		}
 		Path marker = client.runDirectory.toPath().resolve("config").resolve("ultracraft-keys-applied");
 		if (!Files.exists(marker)) return;
 		restore(o.sneakKey, GLFW.GLFW_KEY_C);

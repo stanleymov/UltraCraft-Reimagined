@@ -196,8 +196,11 @@ public final class ProjectileRenderer extends EntityRenderer<UKProjectileEntity>
 	}
 
 	private static final double SAW_SPIN = Tune.def("proj.sawSpin", 1440, "sawblade spin, degrees per second");
-	private static final double HUB_R = Tune.def("proj.sawHubRadius", 0.35, "sawblade hub radius (u; the prefab's ProBuilder cylinder is built at runtime, size by eye)");
-	private static final double HUB_T = Tune.def("proj.sawHubThick", 0.14, "sawblade hub thickness (u)");
+	// NailAlt's ProBuilder Cylinder (texture "sawblade 1", the plain disc of the blade): radius 0.814 x its scale 15 x the
+	// root's 0.1 = 1.22 u, height 0.1 x 1.5 = 0.15 u - the blade's whole body under the toothed sprite, not a small hub
+	// (the old 0.35 by eye showed as a circle inside every saw: user)
+	private static final double HUB_R = Tune.def("proj.sawHubRadius", 1.22, "sawblade body radius (u; NailAlt's ProBuilder cylinder: 0.814 x 15 x 0.1)");
+	private static final double HUB_T = Tune.def("proj.sawHubThick", 0.15, "sawblade body thickness (u; the cylinder's 0.1 x 15 x 0.1)");
 	private static final double TRAIL_W = Tune.def("proj.trailWidth", 2, "sawblade TrailRenderer width (prefab: 2 u)");
 	private static final double TRAIL_T = Tune.def("proj.trailTime", 0.5, "sawblade TrailRenderer time (prefab: 0.5 s)");
 	private static final double TRAIL_DEPTH = Tune.def("proj.trailDepth", 0, "1 = sawblade trails write depth (shader clouds then stay behind them; 0 = the game's _ZWrite 0, no comb where trails overlap)");

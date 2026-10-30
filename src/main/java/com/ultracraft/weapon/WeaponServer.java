@@ -172,7 +172,7 @@ public final class WeaponServer {
 		Gasoline.init();
 		DebugCommands.init();
 		Shop.init();
-		MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.TickEvent.ServerTickEvent e) -> { if (e.phase == net.minecraftforge.event.TickEvent.Phase.END) { ArsenalServer.tickLater(); tickReleased(); tickHeldAi(); recordBoxes(e.getServer()); ParryWarn.tick(e.getServer()); BossRewards.tick(e.getServer()); } });
+		MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.TickEvent.ServerTickEvent e) -> { if (e.phase == net.minecraftforge.event.TickEvent.Phase.END) { ArsenalServer.tickLater(); tickReleased(); tickHeldAi(); recordBoxes(e.getServer()); ParryWarn.tick(e.getServer()); BossRewards.tick(e.getServer()); BloodHeal.tick(); } });
 		// the Iron Golem's hits on V1: Minecraft's own (7.5-21.5 on Normal, a one-hit kill possible; user's call) unless
 		// mob.ironGolem.attack sets a fixed amount (the Cerberus it plays: StatueBoss tackle / stomp orb 25 of 100 = 5)
 		MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingHurtEvent e) -> {
@@ -523,8 +523,7 @@ public final class WeaponServer {
 			if (creeper) ParryServer.creeperBlast(p, best);
 			// the plants between the fist and the enemy go too (the user: the arms break what the guns do)
 			Plants.shoot(world, p, start, point);
-			// blood heal: the enemy's blood lands on V1 at arm's length (BloodsplatterManager → GetHealth)
-			BloodHeal.heal(p, heavy ? 10 : 5);
+			// (the blood heal comes with the hit: Damage.deal → BloodHeal)
 			return;
 		}
 		// (the game punches saws only when the punch hit no enemy: Punch.ActiveFrame's !hitSomething && !parriedSomething)
