@@ -49,17 +49,17 @@ flash, drowning, air brake, short hop ...) are under Mods > UltraCraft Reimagine
 
 ## The Terminal
 
-The Terminal is the shop: walk up to it to open ULTRAKILL's shop screen, and buy weapons, their variations and the
-arms with the P you earn in fights.
+The Terminal is the ULTRAKILL shop. Walk up to it to open the shop screen and buy weapons and their variants with the P
+you earn in fights.
 
 ![The Terminal's shop screen](docs/images/terminal_shop.jpg)
 
-**Crafting recipe** (crafting table):
+**Crafting recipe**:
 
 <img src="docs/images/terminal_recipe.png" width="520" alt="The Terminal's crafting recipe: Iron Ingots all round, Glass at the top in the middle, Redstone Dust in the centre">
 
-The **Grapple Orb** (a point you can place to swing to with the Hook) is crafted from an Ender Pearl with an Iron Ingot
-above, below and to each side; it makes 2.
+The **Grapple Orb** is ULTRAKILL's green hookpoint as a block you can place: throw the Hook at it and V1 is pulled
+straight to it.
 
 ## Installing
 
