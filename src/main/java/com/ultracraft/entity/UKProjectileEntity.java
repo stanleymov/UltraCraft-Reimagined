@@ -689,10 +689,17 @@ public class UKProjectileEntity extends Entity {
 	}
 
 	/** Projectile boost: the pellet's own damage goes, its explosion on hit is the damage. */
-	public void boost() {
+	/** Punch.ParryProjectile on our own pellet: boosted, damage 0, twice the speed, turned to `target` (LookAt). */
+	public void boost(Vec3d target) {
 		dataTracker.set(BOOSTED, true);
 		damage = 0;
-		setVelocity(getVelocity().multiply(2));
+		double speed = getVelocity().length() * 2;
+		Vec3d dir = target.subtract(getPos());
+		if (dir.lengthSquared() < 1e-6) dir = getVelocity();
+		dir = dir.normalize();
+		setVelocity(dir.multiply(speed));
+		velocityModified = true;
+		face(dir);
 	}
 
 	private void face(Vec3d v) {
@@ -886,7 +893,10 @@ public class UKProjectileEntity extends Entity {
 		ServerPlayerEntity sh = shooter();
 		// Nail.OnCollisionEnter returns at once once `hit` is set: a nail that bounced off the environment hurts no one
 		// (wide: a mob is also tested where it was over the last ticks, as the player saw it, which can be blocks away)
-		if (!(k.nail() && nailHit)) for (Entity e : world.getOtherEntities(this, new Box(start, end).expand(radius + 8), ent -> ent instanceof LivingEntity && ent.isAlive() && ent != sh)) {
+		// a punched pellet also goes off on a body still falling (Projectile.Collided: Explode before any dead check): the
+		// shotgun's point-blank zone often kills the mob a tick before the punch, and the blast flew through it (user)
+		boolean corpses = k == ProjectileKind.PELLET && isBoosted();
+		if (!(k.nail() && nailHit)) for (Entity e : world.getOtherEntities(this, new Box(start, end).expand(radius + 8), ent -> ent instanceof LivingEntity && (ent.isAlive() || corpses) && ent != sh)) {
 			// (a start inside the mob, pressed against V1, hits it there; a whiplashed mob is tested along its last step)
 			Optional<Vec3d> p = com.ultracraft.weapon.Hitscan.hitPoint(e, radius, start, end);
 			if (p.isPresent() && p.get().squaredDistanceTo(start) < best) {
@@ -1587,6 +1597,7 @@ public class UKProjectileEntity extends Entity {
 			case PELLET -> {
 				if (isBoosted()) { Explosions.explode(world, sh, point, Explosions.PARRIED, false, "shotgun0", this); return; } // (hurts V1 near it: 35)
 				deal(sh, target, damage, dir, 1000f, HitPayload.SHOTGUN, head, point);
+				if (sh != null) com.ultracraft.weapon.ParryServer.pelletSpent(sh, point);
 				discard();
 			}
 			case SAWBLADE, SAWBLADE_FODDER, SAWBLADE_HEATED -> {

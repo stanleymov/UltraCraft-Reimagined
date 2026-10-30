@@ -166,7 +166,7 @@ public final class ProjectileRenderer extends EntityRenderer<UKProjectileEntity>
 		if (k.sawblade()) {
 			// NailAlt: the blade quad spins (Spin script) and a ProBuilder cylinder hub (texture "sawblade 1") sits in the middle
 			ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((e.age + tickDelta * 0.05f) * (float) Tune.get("proj.sawSpin")));
-			hub(ms, buffers, (float) Tune.get("proj.sawHubRadius"), (float) Tune.get("proj.sawHubThick"));
+			if (Tune.get("proj.sawHubRadius") > 0) hub(ms, buffers, (float) Tune.get("proj.sawHubRadius"), (float) Tune.get("proj.sawHubThick"));
 		}
 		ms.pop();
 		if (k == ProjectileKind.ROCKET && e.isFrozen()) freezeEffect(e, ms, buffers);
@@ -196,10 +196,10 @@ public final class ProjectileRenderer extends EntityRenderer<UKProjectileEntity>
 	}
 
 	private static final double SAW_SPIN = Tune.def("proj.sawSpin", 1440, "sawblade spin, degrees per second");
-	// NailAlt's ProBuilder Cylinder (texture "sawblade 1", the plain disc of the blade): radius 0.814 x its scale 15 x the
-	// root's 0.1 = 1.22 u, height 0.1 x 1.5 = 0.15 u - the blade's whole body under the toothed sprite, not a small hub
-	// (the old 0.35 by eye showed as a circle inside every saw: user)
-	private static final double HUB_R = Tune.def("proj.sawHubRadius", 1.22, "sawblade body radius (u; NailAlt's ProBuilder cylinder: 0.814 x 15 x 0.1)");
+	// NailAlt's ProBuilder Cylinder (texture "sawblade 1"): radius 0.814 x its scale 15 x the root's 0.1 = 1.22 u, height
+	// 0.15 u. Drawn here neither small (0.35: a circle inside every saw) nor at its size (a big disc over the blade): the
+	// user wants the toothed sprite alone, so 0 = not drawn
+	private static final double HUB_R = Tune.def("proj.sawHubRadius", 0, "sawblade body radius (u; 0 = none, the user's pick; NailAlt's ProBuilder cylinder is 1.22)");
 	private static final double HUB_T = Tune.def("proj.sawHubThick", 0.15, "sawblade body thickness (u; the cylinder's 0.1 x 15 x 0.1)");
 	private static final double TRAIL_W = Tune.def("proj.trailWidth", 2, "sawblade TrailRenderer width (prefab: 2 u)");
 	private static final double TRAIL_T = Tune.def("proj.trailTime", 0.5, "sawblade TrailRenderer time (prefab: 0.5 s)");

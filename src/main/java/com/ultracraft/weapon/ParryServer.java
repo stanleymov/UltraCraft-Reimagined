@@ -108,6 +108,17 @@ public final class ParryServer {
 	private record SawPunch(ServerPlayerEntity p, UKProjectileEntity saw, int[] ticks) {}
 	private static final List<SawPunch> sawPunches = new ArrayList<>();
 
+	/** A pellet of V1's that met an enemy: where, and on which server tick (for a punch in the pellet window). */
+	private record SpentPellet(ServerPlayerEntity p, Vec3d at, int tick) {}
+	private static final List<SpentPellet> spentPellets = new ArrayList<>();
+
+	/** UKProjectileEntity: a pellet of `p`'s hit an enemy at `at`. */
+	public static void pelletSpent(ServerPlayerEntity p, Vec3d at) {
+		int now = p.getServer().getTicks();
+		spentPellets.removeIf(s -> now - s.tick() > ServerTune.get("parry.pelletAge", 12));
+		spentPellets.add(new SpentPellet(p, at, now));
+	}
+
 	/** ChainsawPunchRoutine on one saw: from the camera + forward, toward the parry look target (read at its turn). */
 	private static void punchSaw(ServerPlayerEntity p, UKProjectileEntity saw, Vec3d start, Vec3d d, boolean queued) {
 		if (!saw.isAlive() || p.isRemoved()) return;
@@ -408,10 +419,28 @@ public final class ParryServer {
 		}
 		if (firstFrame) {
 			boolean any = false;
+			// Punch.ParryProjectile: every punched pellet turns to the parry look target (the enemy on the crosshair, else
+			// straight ahead): the spread meets on it instead of flying past (user)
+			Vec3d aim = WeaponServer.parryLookTarget(p, start, d, true);
 			for (Entity e : world.getOtherEntities(p, pelletWindow ? zone.expand(12) : zone, ent -> ent instanceof UKProjectileEntity u && u.kind() == ProjectileKind.PELLET && !u.isBoosted() && u.ownedBy(p) && ent.isAlive()
 				&& (inZone.test(ent.getPos()) || (pelletWindow && ent.age <= ServerTune.get("parry.pelletAge", 12))))) {
-				((UKProjectileEntity) e).boost();
+				((UKProjectileEntity) e).boost(aim);
 				any = true;
+			}
+			// a mob right in front: the pellets meet it on the shot's first server tick (a tick is 50 ms, ~2 blocks of
+			// flight), before this punch - sent on the fist's ActiveStart - arrives, so there was nothing left to boost and
+			// the blast only went off when the mob stood further away (user). A punch in the pellet window sets off the
+			// pellets that already hit where they hit, as each would have gone off on the enemy boosted
+			if (pelletWindow) {
+				int now = p.getServer().getTicks();
+				for (Iterator<SpentPellet> it = spentPellets.iterator(); it.hasNext(); ) {
+					SpentPellet sp = it.next();
+					if (sp.p() != p) continue;
+					it.remove();
+					if (now - sp.tick() > ServerTune.get("parry.pelletAge", 12)) continue;
+					Explosions.explode(world, p, sp.at(), Explosions.PARRIED, false, "shotgun0", null);
+					any = true;
+				}
 			}
 			if (any) {
 				success(p, start.add(d.multiply(s)), true);

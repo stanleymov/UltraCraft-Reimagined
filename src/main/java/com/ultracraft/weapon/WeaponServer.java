@@ -536,6 +536,11 @@ public final class WeaponServer {
 
 	/** Punch.GetParryLookTarget: the first enemy the camera ray meets, else straight ahead. */
 	static Vec3d parryLookTarget(ServerPlayerEntity p, Vec3d start, Vec3d d) {
+		return parryLookTarget(p, start, d, false);
+	}
+
+	/** @param corpses a body still falling counts too (punched pellets: the shot's point-blank zone may just have killed it) */
+	static Vec3d parryLookTarget(ServerPlayerEntity p, Vec3d start, Vec3d d, boolean corpses) {
 		var world = p.getServerWorld();
 		// Punch.GetParryLookTarget: a ray along the camera against enemies only (LMD.Enemies), not the world - the first
 		// one on the crosshair line, else straight ahead (the user: an arrow parried toward a creeper goes to it); 128
@@ -544,8 +549,10 @@ public final class WeaponServer {
 		LivingEntity best = null;
 		double bestDist = Double.MAX_VALUE;
 		Vec3d point = end;
-		for (Entity e : world.getOtherEntities(p, new Box(start, end).expand(0.5), e -> e instanceof LivingEntity && e.isAlive())) {
-			var hit = e.getBoundingBox().expand(0.3).raycast(start, end);
+		for (Entity e : world.getOtherEntities(p, new Box(start, end).expand(0.5), e -> e instanceof LivingEntity && (e.isAlive() || corpses))) {
+			// (face to face the camera is inside the grown box, where Box.raycast finds no entry: that is a hit right there)
+			Box bb = e.getBoundingBox().expand(0.3);
+			var hit = bb.contains(start) ? java.util.Optional.of(start) : bb.raycast(start, end);
 			if (hit.isPresent() && hit.get().distanceTo(start) < bestDist) {
 				bestDist = hit.get().distanceTo(start);
 				best = (LivingEntity) e;

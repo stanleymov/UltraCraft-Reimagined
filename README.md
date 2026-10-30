@@ -58,8 +58,16 @@ you earn in fights.
 
 <img src="docs/images/terminal_recipe.png" width="520" alt="The Terminal's crafting recipe: Iron Ingots all round, Glass at the top in the middle, Redstone Dust in the centre">
 
+## Grapple Orb
+
 The **Grapple Orb** is ULTRAKILL's green hookpoint as a block you can place: throw the Hook at it and V1 is pulled
 straight to it.
+
+![A Grapple Orb on a pillar](docs/images/grapple_orb.jpg)
+
+**Crafting recipe**:
+
+<img src="docs/images/grapple_orb_recipe.png" width="520" alt="The Grapple Orb's crafting recipe: Green Stained Glass all round, an Ender Pearl in the centre">
 
 ## Installing
 
