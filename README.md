@@ -21,9 +21,9 @@ weapon variation including ULTRAKILL's own HUD, style meter and shop, all conver
 - **The Terminal**: a craftable shop block with ULTRAKILL's shop screen and music. Buy weapons and variations with P.
 - **Clash Mode**: V1 in third person enables Clash mode. Attack to trigger a spin that kills enemies.
 
-![The Sawed-On shotgun over Nether lava](docs/images/sawed_on_nether.jpg)
+![A Feedbacker parry](docs/images/feedbacker_parry.jpg)
 
-![The Hook in a Nether fortress](docs/images/hook_fortress.jpg)
+![A Knuckleblaster kill in a Nether fortress](docs/images/knuckleblaster_fortress.jpg)
 
 ## Controls
 
@@ -45,7 +45,7 @@ weapon variation including ULTRAKILL's own HUD, style meter and shop, all conver
 Change them under Options > Controls > Key Binds > UltraCraft Reimagined. The mod's own settings (speedometer, parry
 flash, drowning, air brake, short hop ...) are under Mods > UltraCraft Reimagined > Config.
 
-![A parry on an Enderman](docs/images/parry_enderman.jpg)
+![The Hook in a Nether fortress](docs/images/hook_fortress.jpg)
 
 ## The Terminal
 
