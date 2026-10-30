@@ -3,13 +3,13 @@
 ULTRAKILL inside Minecraft (Forge 1.20.1): you play as V1, with ULTRAKILL's own movement, animations, weapons and every
 weapon variation including ULTRAKILL's own HUD, style meter and shop, all converted from your own copy of ULTRAKILL.
 
-> **In beta testing.** No release yet: the setup is built and the first release follows the beta.
+![The Knuckleblaster against the Ender Dragon](docs/images/knuckleblaster_dragon.jpg)
 
 > **Unofficial fan mod.** Not affiliated with or endorsed by New Blood Interactive, Arsi "Hakita" Patala or Mojang.
 > ULTRAKILL © New Blood Interactive. Minecraft © Mojang Studios / Microsoft. Not related to the other Minecraft mods
 > called UltraCraft.
 
-## Features
+## Gameplay
 
 - **V1's movement**: ULTRAKILL's own physics, dash, slide, slam, wall jumps and rocket riding.
 - **Every weapon and variation**, standard and alternate with their on-gun displays, coins and ricochets.
@@ -20,6 +20,10 @@ weapon variation including ULTRAKILL's own HUD, style meter and shop, all conver
   Inventory.
 - **The Terminal**: a craftable shop block with ULTRAKILL's shop screen and music. Buy weapons and variations with P.
 - **Clash Mode**: V1 in third person enables Clash mode. Attack to trigger a spin that kills enemies.
+
+![The Sawed-On shotgun over Nether lava](docs/images/sawed_on_nether.jpg)
+
+![The Hook in a Nether fortress](docs/images/hook_fortress.jpg)
 
 ## Controls
 
@@ -41,18 +45,18 @@ weapon variation including ULTRAKILL's own HUD, style meter and shop, all conver
 Change them under Options > Controls > Key Binds > UltraCraft Reimagined. The mod's own settings (speedometer, parry
 flash, drowning, air brake, short hop ...) are under Mods > UltraCraft Reimagined > Config.
 
+![A parry on an Enderman](docs/images/parry_enderman.jpg)
+
 ## The Terminal
 
 The Terminal is the shop: walk up to it to open ULTRAKILL's shop screen, and buy weapons, their variations and the
 arms with the P you earn in fights.
 
+![The Terminal's shop screen](docs/images/terminal_shop.jpg)
+
 **Crafting recipe** (crafting table):
 
-| | | |
-|:-:|:-:|:-:|
-| Iron Ingot | Glass | Iron Ingot |
-| Iron Ingot | Redstone Dust | Iron Ingot |
-| Iron Ingot | Iron Ingot | Iron Ingot |
+<img src="docs/images/terminal_recipe.png" width="520" alt="The Terminal's crafting recipe: Iron Ingots all round, Glass at the top in the middle, Redstone Dust in the centre">
 
 The **Grapple Orb** (a point you can place to swing to with the Hook) is crafted from an Ender Pearl with an Iron Ingot
 above, below and to each side; it makes 2.
