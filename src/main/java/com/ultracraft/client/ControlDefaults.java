@@ -52,6 +52,27 @@ public final class ControlDefaults {
 				UltraCraft.LOG.warn("could not write {}", controls, e);
 			}
 		}
+		// ULTRAKILL's layout for the two Minecraft keys V1 moves with: sprint (dash) on Shift, sneak (slide, ground slam) on
+		// Ctrl - Minecraft has them the other way round (the user's own setup, and the README's). Keys still on Minecraft's
+		// defaults move once (marker config/ultracraft-controls-3)
+		((KeyBindingAccessor) o.sprintKey).ultracraft$setDefaultKey(InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_LEFT_SHIFT));
+		((KeyBindingAccessor) o.sneakKey).ultracraft$setDefaultKey(InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_LEFT_CONTROL));
+		Path controls3 = client.runDirectory.toPath().resolve("config").resolve("ultracraft-controls-3");
+		if (!Files.exists(controls3)) {
+			boolean moved = migrate(o.sprintKey, GLFW.GLFW_KEY_LEFT_CONTROL);
+			moved |= migrate(o.sneakKey, GLFW.GLFW_KEY_LEFT_SHIFT);
+			if (moved) {
+				KeyBinding.updateKeysByCode();
+				o.write();
+				UltraCraft.LOG.info("Moved sprint (dash) to Shift and sneak (slide) to Ctrl, as in ULTRAKILL");
+			}
+			try {
+				Files.createDirectories(controls3.getParent());
+				Files.writeString(controls3, "UltraCraft Reimagined put dash on Shift and slide on Ctrl once; delete to do it again\n");
+			} catch (IOException e) {
+				UltraCraft.LOG.warn("could not write {}", controls3, e);
+			}
+		}
 		// Minecraft's view bobbing (on by default) stacks on V1's own walking bob (WalkingBob): off once per install (marker
 		// config/ultracraft-viewbob), so a player who turns it back on keeps it (user)
 		Path viewBob = client.runDirectory.toPath().resolve("config").resolve("ultracraft-viewbob");
