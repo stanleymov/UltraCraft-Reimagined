@@ -52,11 +52,31 @@ public final class WhiplashClient {
 	private static final float DT = 0.05f;
 
 	public State state = State.READY;
+	private String lastDebug;
+
+	/** HookArm.beingPulled: V1 itself is being pulled (to a heavy enemy or a grapple point). */
+	public boolean beingPulled() {
+		return state == State.PULLING && (!lightTarget || pointHook);
+	}
+
+	/**
+	 * The slide key only stores a slam (no crouch, no slide, no camera drop - the user's call): from the moment the hook
+	 * holds a heavy enemy or a grapple point, through the pull, until a slam stored on the way has landed.
+	 */
+	public boolean blocksCrouch() {
+		V1 v = V1.INSTANCE;
+		if (v.hookSlam && (v.onGround || !v.heavyFall)) v.hookSlam = false;
+		return ((state == State.CAUGHT || state == State.PULLING) && (!lightTarget || pointHook)) || v.hookSlam;
+	}
 	public boolean returning;
 	public float cooldown;
 	public Vec3d hookPoint = Vec3d.ZERO, throwDirection = new Vec3d(0, 0, 1);
 	public Entity caught;
 	private Vec3d caughtOffset = Vec3d.ZERO;
+	/** The pull's progress: the hooked mob's place last tick, the smallest gap so far (u) and how long it has not shrunk. */
+	private Vec3d pullLast;
+	private double pullBestGap;
+	private float pullStall;
 	public boolean lightTarget;
 	private float returnDistance;
 	/** A light enemy's pull, run here (u/s), and where V1 was last tick (the enemy is carried along with V1's own moves). */
@@ -73,6 +93,8 @@ public final class WhiplashClient {
 		Tune.def("whip.ropeScreen", 1, "1 = the rope starts exactly where the hand is on screen (the arm's projection cast back through the camera); 0 = the plain conversion");
 		Tune.def("whiplash.pullBase", 80, "light enemy pull speed, u/s, plus half the distance it was caught at (HookArm: the hook's return is 100 + returnDistance / 2; 80 by the player's choice)");
 		Tune.def("whiplash.catchGap", 1.0, "u between a pulled light enemy and V1 at which the pull counts as caught (the game: it touches V1, 0.25)");
+		Tune.def("whiplash.stuckTime", 0.5, "seconds a pull may go without getting closer before the hook lets go (0 = never; the mod's own safety: Minecraft's mobs and square body can hold a pull the game's never stalls)");
+		Tune.def("whiplash.teleportDist", 2.5, "blocks the hooked mob may move in one tick before the hook lets go of it (an Enderman's teleport, which Minecraft shows spread over 3 ticks; walking is ~0.3, knockback ~1; 0 = never)");
 		Tune.def("whiplash.hardDamage", 0, "1 = pulling builds hard damage, 66/s up to 50 (HookArm; the game's default, an assist option turns it off)");
 		Tune.def("whiplash.lightHp", 30, "mobs with max health up to this are pulled to V1; heavier ones pull V1 (HookArm.lightEnemies)");
 		Tune.def("whiplash.enabled", 1, "1 = the Whiplash is owned (R throws it)");
@@ -135,6 +157,13 @@ public final class WhiplashClient {
 		ClientPlayerEntity p = client.player;
 		if (p == null || !Tune.on("whiplash.enabled")) return;
 		V1 v = V1.INSTANCE;
+		if (Damage.debug && (state != State.READY || v.hookSlam)) {
+			// (only when something changes)
+			String d = String.format("whip %s light %s pose %s sneaking %s eye %.2f slideHeld %s heavyFall %s sliding %s crouching %s",
+				state, lightTarget, p.getPose(), p.isSneaking(), p.getStandingEyeHeight(), UKKeys.SLIDE.held, v.heavyFall, v.sliding, v.crouching);
+			if (!d.equals(lastDebug)) com.ultracraft.UltraCraft.LOG.info("[weapons] {}", d);
+			lastDebug = d;
+		}
 		RigInstance rig = rig();
 		Vec3d eye = p.getEyePos();
 		Vec3d look = p.getRotationVec(1f);
@@ -257,6 +286,8 @@ public final class WhiplashClient {
 					lightTarget = false;
 					hookPoint = Vec3d.ofCenter(orb);
 					state = State.PULLING;
+					pullStall = -1;
+					pullLast = null;
 					UKSound.stop("uk.weapons.whiplash_throw_loop");
 					UKSound.at(hookPoint, "uk.weapons.hookpointgrab", 1f, 1f);
 					UKSound.play("uk.weapons.whiplash_pull_start", 1f, 1f);
@@ -275,6 +306,8 @@ public final class WhiplashClient {
 				hookPoint = caught.getPos().add(caughtOffset);
 				if (!UKKeys.HOOK.held) {
 					state = State.PULLING;
+					pullStall = -1;
+					pullLast = null;
 					if (rig != null) rig.play("Pull", 1, 0);
 					UKSound.play("uk.weapons.whiplash_pull_start", 1f, 1f);
 					// HookArm: currentWoosh = Instantiate(wooshSound), destroyed again in StopThrow / Cancel
@@ -289,10 +322,12 @@ public final class WhiplashClient {
 			}
 			case PULLING -> {
 				if (pointHook) {
+					if (pullBlocked(client, p, eye)) { release("blocks in the way"); pointHook = false; stopThrow(p, 1); break; }
 					// HookArm on a HookPoint: straight at it at 60 u/s until V1 is there, then let go keeping the momentum
 					Vec3d center = p.getPos().add(0, 0.9, 0);
 					double gap = center.distanceTo(hookPoint) / Damage.SCALE_BLOCKS;
 					if (gap < Tune.get("whiplash.pointRelease")) { pointHook = false; stopThrow(p, 1); break; }
+					if (stalled(gap)) { release("no closer"); pointHook = false; stopThrow(p, 1); break; }
 					Vec3d dir = hookPoint.subtract(center).normalize();
 					v.vel = dir.multiply(60);
 					v.falling = true;
@@ -300,7 +335,13 @@ public final class WhiplashClient {
 					break;
 				}
 				if (caught == null || !caught.isAlive()) { stopThrow(p, 1); break; }
+				// (the mod's own: a mob V1 is pulled to that jumps away in one tick - an Enderman's teleport - is let go; a
+				// light one is moved by the pull itself)
+				double tp = Tune.get("whiplash.teleportDist");
+				if (!lightTarget && tp > 0 && pullLast != null && caught.getPos().distanceTo(pullLast) > tp) { release("teleported"); stopThrow(p, 1); break; }
+				pullLast = caught.getPos();
 				hookPoint = caught.getPos().add(caughtOffset);
+				if (pullBlocked(client, p, eye)) { release("blocks in the way"); stopThrow(p, 1); break; }
 				Vec3d center = p.getPos().add(0, 0.9, 0);
 				// hard damage while pulling an enemy (both directions), 66/s up to 50
 				// (the game's assist option disableWhiplashHardDamage; off here by the player's choice: whiplash.hardDamage)
@@ -308,10 +349,27 @@ public final class WhiplashClient {
 					if (v.antiHp + DT * 66 <= 50) v.antiHp += DT * 66;
 					else if (v.antiHp <= 50) v.antiHp = 50;
 				}
-				Vec3d closest = closest(caught.getBoundingBox(), center);
+				// HookArm: a raycast on the enemy layers from V1 to the hooked enemy's centre - another enemy in between is
+				// what V1 reaches (the arrival is measured to it)
+				Box target = caught.getBoundingBox();
+				double nearest = Double.MAX_VALUE;
+				if (!lightTarget) {
+					Vec3d to = target.getCenter();
+					for (Entity e : client.world.getOtherEntities(p, new Box(center, to).expand(1), e -> e != caught && e instanceof LivingEntity && e.isAlive() && !e.isSpectator())) {
+						Box eb = e.getBoundingBox();
+						Optional<Vec3d> hit = eb.contains(center) ? Optional.of(center) : eb.raycast(center, to);
+						if (hit.isPresent() && hit.get().distanceTo(center) < nearest) { nearest = hit.get().distanceTo(center); target = eb; }
+					}
+				}
+				Vec3d closest = closest(target, center);
 				double gap = closest.distanceTo(closest(p.getBoundingBox(), closest)) / Damage.SCALE_BLOCKS;
+				if (stalled(gap)) { release("no closer"); stopThrow(p, 1); break; }
 				// (the light enemy's position here is a tick or so behind the server's: whiplash.catchGap of room)
-				if (gap < (lightTarget ? Tune.get("whiplash.catchGap") : 0.25) || (!lightTarget && closest.distanceTo(center.add(v.vel.multiply(Damage.SCALE_BLOCKS * DT))) / Damage.SCALE_BLOCKS < 0.25 + 0.6)) {
+				// (V1 moves 1.5 blocks a tick here, the game checks at 50 Hz: an enemy in the way within this tick's move
+				// counts as reached, or V1 flies through it between two checks)
+				boolean inTheWay = target != caught.getBoundingBox() && nearest <= v.vel.length() * Damage.SCALE_BLOCKS * DT + 0.25 * Damage.SCALE_BLOCKS;
+				if (inTheWay || gap < (lightTarget ? Tune.get("whiplash.catchGap") : 0.25) || (!lightTarget && closest.distanceTo(center.add(v.vel.multiply(Damage.SCALE_BLOCKS * DT))) / Damage.SCALE_BLOCKS < 0.25 + 0.6)) {
+					release(target == caught.getBoundingBox() ? "arrived" : "arrived at an enemy in the way");
 					Net.toServer(new FirePayload(FirePayload.HOOK, catchMode(), caught.getId(), eye, look));
 					stopThrow(p, 1);
 					double dy = hookPoint.y - center.y;
@@ -330,6 +388,39 @@ public final class WhiplashClient {
 			}
 			default -> {}
 		}
+	}
+
+	/**
+	 * The pull's safety net (the mod's own, whiplash.stuckTime): the gap to what V1 is pulled to must keep shrinking; a
+	 * pull that gets no closer for that long (a mob walking off as fast, pushing back, a body caught on something) lets go.
+	 */
+	private static void release(String why) {
+		if (Damage.debug) com.ultracraft.UltraCraft.LOG.info("[weapons] whip let go: {}", why);
+	}
+
+	private boolean stalled(double gap) {
+		double limit = Tune.get("whiplash.stuckTime");
+		if (pullStall < 0 || gap < pullBestGap - 0.1) {
+			pullBestGap = gap;
+			pullStall = 0;
+			return false;
+		}
+		pullStall += DT;
+		return limit > 0 && pullStall >= limit;
+	}
+
+	/**
+	 * HookArm.FixedUpdate while Pulling: anything of the level between V1 and the hook point (Physics.Raycast to it on
+	 * the environment) lets go at once. Without it V1 hung on a block's edge for seconds with the pull still pushing
+	 * (Minecraft's square body catches where the game's capsule slides off). The ray stops just short of the hook
+	 * point, which can sit on a floor or wall.
+	 */
+	private static boolean pullBlocked(MinecraftClient client, ClientPlayerEntity p, Vec3d eye) {
+		Vec3d to = INSTANCE.hookPoint.subtract(eye);
+		double len = to.length();
+		if (len < 0.1) return false;
+		Vec3d end = eye.add(to.multiply((len - 0.05) / len));
+		return client.world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, p)).getType() != HitResult.Type.MISS;
 	}
 
 	/** A light enemy's pull step owed this tick (run once V1 and the world have moved). */
@@ -426,6 +517,7 @@ public final class WhiplashClient {
 
 	/** HookArm.StopThrow: the hook starts coming back; 0 = cancelled throw (pull sound), 1 = pull finished. */
 	private void stopThrow(ClientPlayerEntity p, float animationTime) {
+		pullLast = null;
 		ownPullPosition = false;
 		com.ultracraft.weapon.WeaponServer.clientPulledId = -1;
 		if (animationTime == 0) {

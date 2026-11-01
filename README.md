@@ -1,5 +1,7 @@
 # UltraCraft Reimagined
 
+[![Download the latest release](https://img.shields.io/badge/Download-latest%20release-d9262b?style=for-the-badge)](../../releases/latest)
+
 ULTRAKILL inside Minecraft (Forge 1.20.1): you play as V1, with ULTRAKILL's own movement, animations, weapons and every
 weapon variation including ULTRAKILL's own HUD, style meter and shop, all converted from your own copy of ULTRAKILL.
 

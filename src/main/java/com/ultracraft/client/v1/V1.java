@@ -67,6 +67,8 @@ public final class V1 {
 	public boolean crouching, slowMode, standing = true;
 
 	public boolean heavyFall;
+	/** A slam stored while the whiplash pulled V1: the slide key only holds it (no crouch) until it lands. */
+	public boolean hookSlam;
 	/** Clash mode (PlatformerMovement): the slam's wind-up, V1 held in the air before it drops, and its time so far. */
 	public boolean aboutToSlam;
 	public double slamWindup;

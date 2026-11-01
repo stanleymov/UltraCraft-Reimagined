@@ -88,6 +88,7 @@ public final class V1Movement {
 		s.boostLeft = 0;
 		s.heavyFall = false;
 		s.slamStorage = false;
+		s.hookSlam = false;
 		s.camDropTarget = 0;
 		s.crouching = false;
 		s.slowMode = false;
@@ -361,7 +362,8 @@ public final class V1Movement {
 		tickRocketRide(p, s);
 		if (s.ridingRocket >= 0) return;
 		if (UKKeys.JUMP.press && !s.jumpCooldown && canJumpNormal) jump(p, s);
-		if (UKKeys.SLIDE.press) {
+		// (while the whiplash pulls V1 the key only stores a slam: no slide, no camera drop - the user's call)
+		if (UKKeys.SLIDE.press && !com.ultracraft.client.weapon.WhiplashClient.INSTANCE.blocksCrouch()) {
 			boolean groundNear = groundWithin(p, 2);
 			if ((s.onGround || s.sinceLastGrounded < 0.06 || s.lastJump < 0.06 || groundNear) && (!s.slowMode || s.crouching) && !s.sliding) {
 				startSlide(p, s);
@@ -406,6 +408,8 @@ public final class V1Movement {
 			s.windState = 0.5;
 			s.boost = false;
 		}
+		if (com.ultracraft.weapon.Damage.debug) com.ultracraft.UltraCraft.LOG.info("[weapons] slam try: ground3 {} fallTime {} cooldown {} heavyFall {} pulled {}",
+			groundWithin(p, 3), s.fallTime, s.slamCooldown, s.heavyFall, com.ultracraft.client.weapon.WhiplashClient.INSTANCE.beingPulled());
 		if (!groundWithin(p, 3) && s.fallTime > 0.5 && s.slamCooldown == 0 && !s.heavyFall) {
 			if (s.boost) { s.boostLeft = 0; s.boost = false; }
 			if (s.sliding) stopSlide(p, s);
@@ -424,13 +428,21 @@ public final class V1Movement {
 
 	/** NewMovement / PlatformerMovement.Slam: straight down at 100 u/s. */
 	private static void slam(V1 s) {
+		// TryStartSlam while the hook pulls V1: slam storage (the pull goes on, the slam charges, it lands as a slam).
+		// The game's straight-down kick lasts until the hook's next 50 Hz step; the pull here is set once a 20 Hz tick,
+		// so the kick would drop V1 up to 2.5 blocks first (to the ground, low down): a stored slam leaves V1's speed be.
+		boolean pulled = com.ultracraft.client.weapon.WhiplashClient.INSTANCE.beingPulled();
 		s.falling = true;
 		s.fallSpeed = -SLAM_SPEED;
-		s.vel = new Vec3d(0, -SLAM_SPEED, 0);
+		if (!pulled) s.vel = new Vec3d(0, -SLAM_SPEED, 0);
 		s.stillHolding = true;
 		s.heavyFall = true;
 		s.slamForce = 1;
 		s.slamHits.clear();
+		if (pulled) {
+			s.slamStorage = true;
+			s.hookSlam = true;
+		}
 		if (com.ultracraft.weapon.Damage.debug) com.ultracraft.UltraCraft.LOG.info("[weapons] slam start");
 	}
 

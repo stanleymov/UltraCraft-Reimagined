@@ -4,6 +4,6 @@
   "package": "com.ultracraft.client.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "UltraCraft-refmap.json",
-  "client": ["KeyBindingAccessor", "LivingEntityMovementMixin", "GameRendererMixin", "CameraMixin", "EntityStepSoundMixin", "ItemEntityRendererMixin", "MouseZoomMixin", "RenderTickCounterMixin", "HookedPositionMixin", "LivingEntityRendererMixin", "SourceMixin", "WorldRendererLightMixin", "EntityRendererLightMixin", "SoundSystemPitchMixin", "InventoryEntityMixin"],
+  "client": ["KeyBindingAccessor", "LivingEntityMovementMixin", "GameRendererMixin", "CameraMixin", "EntityStepSoundMixin", "ItemEntityRendererMixin", "MouseZoomMixin", "RenderTickCounterMixin", "HookedPositionMixin", "LivingEntityRendererMixin", "SourceMixin", "WorldRendererLightMixin", "EntityRendererLightMixin", "SoundSystemPitchMixin", "InventoryEntityMixin", "KeyboardInputMixin"],
   "injectors": { "defaultRequire": 1 }
 }

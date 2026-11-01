@@ -457,6 +457,9 @@ public final class WeaponServer {
 				boolean killed = wasAlive && !t.isAlive();
 				Net.toNear(world, t.getPos(), new HitPayload(killed ? HitPayload.KILL : HitPayload.ENEMY_HIT, HitPayload.SPIN, 0, Damage.flags(t), t.getPos()));
 			}
+			// (End crystals are not living: the spin breaks them too)
+			for (var crystal : world.getEntitiesByClass(net.minecraft.entity.decoration.EndCrystalEntity.class, p.getBoundingBox().expand(1.5 * Damage.SCALE_BLOCKS * 2), Entity::isAlive))
+				Damage.hitCrystal(p, crystal);
 			return;
 		}
 		if (mode == 2) {
@@ -507,6 +510,16 @@ public final class WeaponServer {
 				bestDist = hit.get().distanceTo(start);
 				best = (LivingEntity) e;
 				point = hit.get();
+			}
+		}
+		// an End crystal in front of anything living takes the punch instead (not living, so the search above skips it;
+		// it blows up in V1's face like a hit with Minecraft's own hand - the player's choice)
+		for (var crystal : Damage.crystalsOn(world, start, end, radius)) {
+			Box cb = crystal.getBoundingBox().expand(radius);
+			double cd = cb.contains(start) ? 0 : cb.raycast(start, end).map(h -> h.distanceTo(start)).orElse(Double.MAX_VALUE);
+			if (cd < bestDist) {
+				Damage.hitCrystal(p, crystal);
+				return;
 			}
 		}
 		if (best != null) {
