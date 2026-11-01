@@ -1,2 +1,2 @@
-Placeholder icon (a red square with "UCR", drawn by script in Segoe UI): replace ultracraft.ico and ultracraft_1024.png
-with the real icon when it is made, then rebuild the launcher (cargo build --release in installer/launcher).
+The setup icon (StanleyMOV): ultracraft_1024.png is the source; ultracraft.ico holds 16-256 px. After changing it,
+rebuild the launcher (cargo build --release in installer/launcher) and the package.
