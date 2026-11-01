@@ -71,13 +71,11 @@ straight to it.
 
 ## Clash Mode
 
-Press **F5** for third person view and V1 plays like ULTRAKILL's **Clash Mode**, the cheat that turns the game into a
-third-person platformer:
+Press **F5** for third person view and V1 plays like ULTRAKILL's **Clash Mode**:
 
 - **Spin attack**: attack to spin. The spin kills the enemies it hits; bosses take a hit instead.
 - **V1's own model and animations**: running, jumping, sliding, landing, and the ground slam with its wind-up in the
   air.
-- **No guns**: V1 fights with the spin. Back in first person, your weapon comes out again.
 - **Lava**: with the ULTRAKILL lava setting on, lava burns V1 to ash, as it does in ULTRAKILL's Clash Mode.
 
 ![V1's spin attack killing a husk in Clash Mode](docs/images/clash_spin.jpg)
