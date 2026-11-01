@@ -71,7 +71,7 @@ straight to it.
 
 ## Clash Mode
 
-Press **F5** for third person and V1 plays like ULTRAKILL's **Clash Mode**, the cheat that turns the game into a
+Press **F5** for third person view and V1 plays like ULTRAKILL's **Clash Mode**, the cheat that turns the game into a
 third-person platformer:
 
 - **Spin attack**: attack to spin. The spin kills the enemies it hits; bosses take a hit instead.
