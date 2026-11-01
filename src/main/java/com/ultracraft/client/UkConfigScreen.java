@@ -47,6 +47,9 @@ public final class UkConfigScreen extends Screen {
 		addDrawableChild(CyclingButtonWidget.onOffBuilder(UkConfig.shortHop())
 			.tooltip(v -> net.minecraft.client.gui.tooltip.Tooltip.of(Text.literal("Tap jump for a short hop of about a block; hold it for the full jump")))
 			.build(x, y + 120, 200, 20, Text.literal("Short hop"), (b, v) -> { if (loaded) UkConfig.SHORT_HOP.set(v); }));
+		addDrawableChild(CyclingButtonWidget.onOffBuilder(UkConfig.lavaBounce())
+			.tooltip(v -> net.minecraft.client.gui.tooltip.Tooltip.of(Text.literal("ULTRAKILL's lava: it throws you back out and costs 2 hearts, without setting you on fire (off: Minecraft's lava)")))
+			.build(x, y + 144, 200, 20, Text.literal("ULTRAKILL lava"), (b, v) -> { if (loaded) UkConfig.LAVA_BOUNCE.set(v); }));
 		addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close()).dimensions(x, height - 40, 200, 20).build());
 	}
 

@@ -740,7 +740,7 @@ public final class WeaponClient {
 					Vec3d dir = msg.pos().subtract(p.getEyePos());
 					float amount = msg.kind() == HitPayload.KILL ? 2f : (msg.flags() & HitPayload.BIG) != 0 ? 1.5f : 1f;
 					if (msg.hitter() == HitPayload.NAIL || msg.hitter() == HitPayload.SAW) amount *= 0.4f;
-					BloodFx.spawn(msg.pos(), dir, amount);
+					BloodFx.spawn(msg.pos(), dir, amount, msg.kind() == HitPayload.KILL);
 				}
 				// (the hammer's own effects come with its SWING message)
 				if (msg.hitter() == HitPayload.HAMMER) break;

@@ -170,6 +170,7 @@ public final class WeaponServer {
 		Net.onServer(PointsPayload.class, WeaponServer::onPoints);
 		ParryServer.init();
 		Gasoline.init();
+		LavaServer.init();
 		DebugCommands.init();
 		Shop.init();
 		MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.TickEvent.ServerTickEvent e) -> { if (e.phase == net.minecraftforge.event.TickEvent.Phase.END) { ArsenalServer.tickLater(); tickReleased(); tickHeldAi(); recordBoxes(e.getServer()); ParryWarn.tick(e.getServer()); BossRewards.tick(e.getServer()); BloodHeal.tick(); } });
@@ -271,6 +272,8 @@ public final class WeaponServer {
 			case FirePayload.HOOK -> hook(msg, p);
 			case FirePayload.SHOCKWAVE -> shockwave(msg, p);
 			case FirePayload.STOMP -> stomp(msg, p);
+			case FirePayload.LAVA -> LavaServer.touched(p);
+			case FirePayload.LAVA_BURN -> LavaServer.burn(p);
 			default -> {}
 		}
 	}

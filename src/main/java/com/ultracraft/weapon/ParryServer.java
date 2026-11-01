@@ -34,8 +34,9 @@ import java.util.Map;
  * knockback and V1 is healed to full (NewMovement.Parry: ParryFlash, GetHealth(999), FullStamina, +100 PARRY).</li>
  * <li>Projectiles: during the punch's active frames (Punch.ActiveFrame on three ticks), an enemy projectile near the
  * camera is sent back where V1 looks at twice its speed, owned by V1 (Punch.ParryProjectile).</li>
- * <li>Projectile boost: on the first active frame, V1's own shotgun pellets still in front of the camera are boosted:
- * orange, twice as fast, a four times wider hitbox, and they explode on whatever they hit.</li>
+ * <li>Projectile boost: on the first active frame, one of V1's own shotgun pellets in front of the camera (the one
+ * nearest the aim line) is boosted: orange, twice as fast, a four times wider hitbox, and it explodes on whatever it
+ * hits. The other pellets stay normal.</li>
  * </ul>
  */
 public final class ParryServer {
@@ -419,26 +420,40 @@ public final class ParryServer {
 		}
 		if (firstFrame) {
 			boolean any = false;
-			// Punch.ParryProjectile: every punched pellet turns to the parry look target (the enemy on the crosshair, else
-			// straight ahead): the spread meets on it instead of flying past (user)
+			// Punch.ActiveFrame boosts ONE pellet a punch (alreadyBoostedProjectile / parriedSomething): the one on the
+			// crosshair ray, else the closest in the zone - here the one nearest the aim line. The rest fly on as normal
+			// pellets and bleed the enemy (blood that heals). Punch.ParryProjectile turns it to the parry look target
 			Vec3d aim = WeaponServer.parryLookTarget(p, start, d, true);
+			UKProjectileEntity pick = null;
+			double pickOff = Double.MAX_VALUE;
 			for (Entity e : world.getOtherEntities(p, pelletWindow ? zone.expand(12) : zone, ent -> ent instanceof UKProjectileEntity u && u.kind() == ProjectileKind.PELLET && !u.isBoosted() && u.ownedBy(p) && ent.isAlive()
 				&& (inZone.test(ent.getPos()) || (pelletWindow && ent.age <= ServerTune.get("parry.pelletAge", 12))))) {
-				((UKProjectileEntity) e).boost(aim);
+				double off = offAim(e.getPos(), start, d);
+				if (off < pickOff) { pickOff = off; pick = (UKProjectileEntity) e; }
+			}
+			if (pick != null) {
+				pick.boost(aim);
 				any = true;
 			}
 			// a mob right in front: the pellets meet it on the shot's first server tick (a tick is 50 ms, ~2 blocks of
 			// flight), before this punch - sent on the fist's ActiveStart - arrives, so there was nothing left to boost and
 			// the blast only went off when the mob stood further away (user). A punch in the pellet window sets off the
 			// pellets that already hit where they hit, as each would have gone off on the enemy boosted
+			// (one boost a punch: only when no pellet was left in flight, and then only the hit nearest the aim line)
 			if (pelletWindow) {
 				int now = p.getServer().getTicks();
+				SpentPellet spent = null;
+				double spentOff = Double.MAX_VALUE;
 				for (Iterator<SpentPellet> it = spentPellets.iterator(); it.hasNext(); ) {
 					SpentPellet sp = it.next();
 					if (sp.p() != p) continue;
 					it.remove();
-					if (now - sp.tick() > ServerTune.get("parry.pelletAge", 12)) continue;
-					Explosions.explode(world, p, sp.at(), Explosions.PARRIED, false, "shotgun0", null);
+					if (any || now - sp.tick() > ServerTune.get("parry.pelletAge", 12)) continue;
+					double off = offAim(sp.at(), start, d);
+					if (off < spentOff) { spentOff = off; spent = sp; }
+				}
+				if (spent != null) {
+					Explosions.explode(world, p, spent.at(), Explosions.PARRIED, false, "shotgun0", null);
 					any = true;
 				}
 			}
@@ -448,6 +463,13 @@ public final class ParryServer {
 			}
 		}
 		return false;
+	}
+
+	/** How far `q` is from the aim line (start, d), behind the camera counted as far off. */
+	private static double offAim(Vec3d q, Vec3d start, Vec3d d) {
+		Vec3d r = q.subtract(start);
+		double along = r.dotProduct(d);
+		return along < 0 ? r.length() + 1000 : r.subtract(d.multiply(along)).length();
 	}
 
 	/**

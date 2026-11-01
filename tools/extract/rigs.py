@@ -175,7 +175,10 @@ def load_rig(key: str, animator_name: str | None = None) -> Rig:
                 effect = True
         # static meshes inside the rig (the nailgun's spinning barrels, the revolver's charge monitor, ...): rigid to their
         # node; particle / UI objects and inactive ones are effects the game turns on itself
-        if mf is not None and mr is not None and not effect and go.m_IsActive and getattr(mr, "m_Enabled", 1):
+        # V1's seasonal hats (SeasonalHats: Christmas, the Halloween pumpkin, Easter) are switched off in the prefab and
+        # turned on by date: taken whatever their active flag, the mod shows each on its own dates
+        hat = "Seasonal Hats" in path
+        if mf is not None and mr is not None and not effect and (go.m_IsActive or hat) and getattr(mr, "m_Enabled", 1):
             rig.static.append((go.m_Name, path, idx, mf, mr))
         for ch in tr.m_Children:
             walk(ch.read(), idx, path if parent != -1 else "")

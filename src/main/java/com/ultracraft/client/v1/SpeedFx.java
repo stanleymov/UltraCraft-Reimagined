@@ -106,6 +106,12 @@ public final class SpeedFx {
 		Tune.def("fx.sparksEverywhere", 0, "1 = slide sparks on every surface (the game: only stone-like, glass, marble, metal, wet)");
 		Tune.def("fx.sparkCameraClear", 0.35, "slide sparks are re-aimed so their path stays this far from the camera, blocks (0 = off)");
 		Tune.def("fx.sparkBelowEye", 1.4, "slide sparks sit at the player root: this many u under the eye (Main Camera local y 1.4)");
+		Tune.def("fx.sparkAboveFloor", 0.1, "first person: slide sparks never lower than this above the feet, blocks (the slide's low camera put the root under the floor)");
+		Tune.def("fx.clashSparkRate", 80, "third person slide sparks per second (SlideScrape: 80)");
+		Tune.def("fx.clashSparkSpeed", 10, "third person slide spark speed, u/s (SlideScrape: 10)");
+		Tune.def("fx.clashSparkWidth", 0.25, "third person slide spark trail width at its widest, u (0.5 x size 0.5)");
+		Tune.def("fx.clashSparkAlpha", 0.2, "third person slide spark trail start alpha (SlideScrape: 0.2)");
+		Tune.def("fx.clashSparkLife", 0.5, "third person slide spark life, s: the trail reaches speed x life (SlideScrape: 0.5)");
 		Tune.def("fx.dashSafeRadius", 0.75, "dash lines: no line closer than this to the camera, blocks (smaller so they fly past you)");
 		Tune.def("fx.dashSafeFade", 0.75, "dash lines: fade-in distance past their safe radius, blocks");
 		Tune.def("fx.safeRadius", 1.5, "no streak is drawn closer than this to the camera, blocks");
@@ -240,21 +246,24 @@ public final class SpeedFx {
 			// SlideScrape (root scale 0.25) / Sparks (scale 4, Hierarchy scaling: × 1): at the player root + the ground
 			// velocity direction × 1 u, facing back, moved and turned with the slide every frame (Local simulation).
 			// 80 per second from a 60° cone, 10 u/s, 0.5 s, gravity modifier 0.5 × Physics.gravity −40.
-			sparkEmitter = sparkRoot(p, e.getPartialTick()).add(dir.multiply(1 * s));
+			// clash mode (third person, PlatformerMovement): the same SlideScrape at the feet + dodgeDirection, with the
+			// prefab's own values - no flashes, no aiming round the camera (that is first person's tuning)
+			boolean clash = !c.options.getPerspective().isFirstPerson();
+			sparkEmitter = (clash ? p.getLerpedPos(e.getPartialTick()) : sparkRoot(p, e.getPartialTick())).add(dir.multiply(1 * s));
 			sparkFrame = frame(dir.multiply(-1));
 			if (v.onGround && (Surfaces.under(p).sparks() || Tune.on("fx.sparksEverywhere"))) {
 				Vec3d camNow = e.getCamera().getPos();
-				double clear = Tune.get("fx.sparkCameraClear");
-				boolean flash = Tune.on("fx.sparkFlash");
+				double clear = clash ? 0 : Tune.get("fx.sparkCameraClear");
+				boolean flash = !clash && Tune.on("fx.sparkFlash");
 				double rs = Tune.get("fx.sparkRateShort"), rm = Tune.get("fx.sparkRateMed"), rl = Tune.get("fx.sparkRateLong");
-				sparkAcc += (flash ? rs + rm + rl : Tune.get("fx.sparkRate")) * dt;
+				sparkAcc += (flash ? rs + rm + rl : Tune.get(clash ? "fx.clashSparkRate" : "fx.sparkRate")) * dt;
 				while (sparkAcc >= 1) {
 					sparkAcc -= 1;
 					Streak k = new Streak();
 					k.local = true;
 					k.birth = Vec3d.ZERO;
-					double var = Tune.get("fx.sparkSpeedVar");
-					double speed = Tune.get("fx.sparkSpeed") * s * (1 + var * (rnd.nextDouble() * 2 - 1));
+					double var = clash ? 0 : Tune.get("fx.sparkSpeedVar");
+					double speed = Tune.get(clash ? "fx.clashSparkSpeed" : "fx.sparkSpeed") * s * (1 + var * (rnd.nextDouble() * 2 - 1));
 					double len = 0;
 					if (flash) {
 						// one of three lengths (± 25 %), straight, gone in a blink
@@ -275,7 +284,8 @@ public final class SpeedFx {
 					if (d == null) continue;
 					k.vel = d.multiply(speed);
 					k.gravity = 0.5 * 40 * s;
-					k.life = 0.5f;
+					// (a trail spans the spark's whole path: speed x life is how far it reaches)
+					k.life = clash ? (float) Tune.get("fx.clashSparkLife") : 0.5f;
 					if (flash) {
 						k.flash = true;
 						k.vel = d.multiply(len * s);
@@ -283,10 +293,10 @@ public final class SpeedFx {
 						k.life = (float) (Tune.get("fx.sparkFlashLife") * (0.7 + rnd.nextDouble() * 0.6));
 					}
 					// trail width 0.5 × particle size (0.1–0.5 u); fx.sparkWidth is the widest (0.5 × 0.5)
-					k.width = (float) (Tune.get("fx.sparkWidth") * s * (0.2 + rnd.nextDouble() * 0.8));
+					k.width = (float) (Tune.get(clash ? "fx.clashSparkWidth" : "fx.sparkWidth") * s * (0.2 + rnd.nextDouble() * 0.8));
 					float br = (float) Tune.get("fx.sparkBright");
 					k.r = br; k.g = 0.83f * br; k.b = 0;
-					k.a0 = (float) Tune.get("fx.sparkAlpha"); // trail alpha 0.2 → 0 in the game
+					k.a0 = (float) Tune.get(clash ? "fx.clashSparkAlpha" : "fx.sparkAlpha"); // trail alpha 0.2 → 0 in the game
 					streaks.add(k);
 				}
 			}
@@ -396,7 +406,9 @@ public final class SpeedFx {
 
 	/** NewMovement's transform.position (the root): fx.sparkBelowEye u under the standing eye, interpolated. */
 	private static Vec3d sparkRoot(ClientPlayerEntity p, float tickDelta) {
-		return p.getLerpedPos(tickDelta).add(0, p.getStandingEyeHeight() - Tune.get("fx.sparkBelowEye") * Damage.SCALE_BLOCKS, 0);
+		// (sliding, the eye is at crawl height, 0.42 blocks: 1.4 u under it is below the floor - kept just above it then)
+		double y = Math.max(Tune.get("fx.sparkAboveFloor"), p.getStandingEyeHeight() - Tune.get("fx.sparkBelowEye") * Damage.SCALE_BLOCKS);
+		return p.getLerpedPos(tickDelta).add(0, y, 0);
 	}
 
 	private static boolean safeOn = true;

@@ -156,6 +156,11 @@ public final class V1Movement {
 		Tune.def("water.ease", 10, "how hard the water slows a faster fall, per second (from the game: 10)");
 		Tune.def("water.depth", 0.5, "the water pushes V1 only while it is in up to this share of its height (by eye: with just its feet in at the surface it floated; the game's trigger counts any touch)");
 		Tune.def("water.jumpMult", 0.75, "jump strength in water (by eye: the user's pick; the game has no change, 1)");
+		Tune.def("lava.bounceForce", 500, "ULTRAKILL lava option: the lava HurtZone's bounceForce (Launch x 8 on 100 kg: 500 = 40 u/s)");
+		Tune.def("lava.cooldown", 1, "ULTRAKILL lava option: seconds between bounces (HurtZone.hurtCooldown 1)");
+		Tune.def("water.skipMinFall", 6, "sliding onto water skips off it when falling faster than this, u/s (a one-block drop ~12; the bank's 1/9-block drop ~4 sinks: user)");
+		Tune.def("water.skipUp", 10, "the skip's push up, u/s (GroundCheck.BounceOnWater: 10)");
+		Tune.def("water.skipDip", 0.15, "the skip comes this far under the water's surface, blocks: V1 touches the water (user)");
 		Tune.def("water.speedMult", 0.8, "V1's walking speed and air control in water (by eye: the user's pick; the game has no change, 1)");
 	}
 
@@ -265,6 +270,7 @@ public final class V1Movement {
 		// (the wind-up takes no input: PlatformerMovement.Update returns before it)
 		if (canInput && !s.aboutToSlam) handleInputs(p, s, first);
 		if (!s.onGround) cling(p, s);
+		else V1Sounds.wallScrape(p, null);
 
 		if (s.heavyFall) {
 			if (!s.slamStorage) s.vel = new Vec3d(0, -SLAM_SPEED, 0);
@@ -337,14 +343,16 @@ public final class V1Movement {
 	}
 
 	private static void cling(ClientPlayerEntity p, V1 s) {
-		if (!s.onWall || s.wallNormal == Vec3d.ZERO) return;
+		if (!s.onWall || s.wallNormal == Vec3d.ZERO) { V1Sounds.wallScrape(p, null); return; }
 		boolean pushing = s.inputDir.dotProduct(s.wallNormal) < -0.3;
 		double vy = s.vel.y;
 		if (!s.sliding && pushing && !s.heavyFall && vy < -1) {
 			double vx = MathHelper.clamp(s.vel.x, -1, 1), vz = MathHelper.clamp(s.vel.z, -1, 1);
 			s.vel = new Vec3d(vx, -2 * s.clingFade, vz);
 			s.clingFade = Math.min(CLING_MAX, s.clingFade + V1.DT * 4);
-		}
+			// Cling: CreateWallScrape - the wall's scrape and its sounds while V1 slides down it
+			V1Sounds.wallScrape(p, s.wallNormal);
+		} else V1Sounds.wallScrape(p, null);
 	}
 
 	private static void handleInputs(ClientPlayerEntity p, V1 s, boolean first) {
@@ -725,6 +733,83 @@ public final class V1Movement {
 		// (only while V1 is in the water up to water.depth of its height: with just its feet in at the surface it floated
 		// there, the water pushing it up nearly as hard as gravity pulls - out of a jump it should drop back in)
 		if (p.isTouchingWater() && s.ridingRocket < 0 && waterAt(p, Tune.get("water.depth"))) water(s);
+		skipOnWater(p, s);
+	}
+
+	private static long lastLavaNanos;
+
+	/**
+	 * The ULTRAKILL lava option: the level lava's HurtZone (bounceForce 500, hurtCooldown 1) - on touching it V1 is
+	 * Launched away from its nearest point, (V1 - closest).normalized × 500 × 8 on 100 kg = 40 u/s, at most once a second,
+	 * and the server takes the 20 damage (LavaServer). Checked on the box V1 sweeps this tick, so it is thrown out before
+	 * Minecraft's lava swallows it.
+	 */
+	public static void lavaBounce(ClientPlayerEntity p) {
+		// (a dying V1's body still lies in the lava: it neither bounces nor burns again)
+		if (!com.ultracraft.UkConfig.lavaBounce() || p.isSpectator() || p.getAbilities().flying || p.hasVehicle() || V1.INSTANCE.dead || !p.isAlive()) return;
+		long now = System.nanoTime();
+		if (now - lastLavaNanos < (long) (Tune.get("lava.cooldown") * 1e9)) return;
+		V1 s = V1.INSTANCE;
+		var world = p.getWorld();
+		Box b = p.getBoundingBox();
+		Box swept = b.stretch(wasActive ? s.vel.multiply(V1.SCALE / 20.0) : p.getVelocity());
+		Vec3d centre = b.getCenter(), closest = null;
+		double best = Double.MAX_VALUE;
+		for (net.minecraft.util.math.BlockPos bp : net.minecraft.util.math.BlockPos.iterate((int) Math.floor(swept.minX), (int) Math.floor(swept.minY), (int) Math.floor(swept.minZ),
+			(int) Math.floor(swept.maxX), (int) Math.floor(swept.maxY), (int) Math.floor(swept.maxZ))) {
+			var fs = world.getFluidState(bp);
+			if (!fs.isIn(net.minecraft.registry.tag.FluidTags.LAVA)) continue;
+			Box lava = new Box(bp.getX(), bp.getY(), bp.getZ(), bp.getX() + 1, bp.getY() + fs.getHeight(world, bp), bp.getZ() + 1);
+			if (!lava.intersects(swept)) continue;
+			Vec3d c = new Vec3d(MathHelper.clamp(centre.x, lava.minX, lava.maxX), MathHelper.clamp(centre.y, lava.minY, lava.maxY), MathHelper.clamp(centre.z, lava.minZ, lava.maxZ));
+			double d = c.squaredDistanceTo(centre);
+			if (d < best) { best = d; closest = c; }
+		}
+		if (closest == null) return;
+		lastLavaNanos = now;
+		if (com.ultracraft.weapon.Damage.debug) com.ultracraft.UltraCraft.LOG.info("[lava] touch: burn={} perspective={} creative={}", V1Burn.wants(p),
+			MinecraftClient.getInstance().options.getPerspective(), p.isCreative());
+		// clash mode (PlatformerMovement): a Burn hurt zone does not bounce V1, it burns it to ash
+		if (V1Burn.wants(p)) {
+			V1Burn.start(p);
+			return;
+		}
+		Vec3d away = centre.subtract(closest);
+		Vec3d dir = away.lengthSquared() < 1e-6 ? new Vec3d(0, 1, 0) : away.normalize();
+		launch(s, dir.multiply(Tune.get("lava.bounceForce")), 8);
+		p.setVelocity(s.vel.multiply(V1.SCALE / 20.0));
+		com.ultracraft.net.Net.toServer(new com.ultracraft.net.FirePayload(com.ultracraft.net.FirePayload.LAVA, 0, 0, p.getEyePos(), dir));
+	}
+
+	/**
+	 * GroundCheck.BounceOnWater: sliding and falling, out of the water, meeting water sets vy to 0 and adds 10 u/s up,
+	 * with a small splash at 0.65; the slide keeps its speed and steering, so V1 skips on until the slide ends and it
+	 * sinks. The game's ray reaches as far down as the fall speed (|vy| u), so a long fall bounced in mid-air blocks
+	 * above the water: here the skip comes as the feet reach the surface (user). It only starts past
+	 * water.skipMinFall u/s down, so a slide off the bank, level with the water, sinks (user).
+	 */
+	private static void skipOnWater(ClientPlayerEntity p, V1 s) {
+		if (!s.sliding || s.vel.y >= -Tune.get("water.skipMinFall") || s.ridingRocket >= 0) return;
+		var world = p.getWorld();
+		// the skip line: water.skipDip under the surface, so V1 touches the water, almost going under (user)
+		double dip = Tune.get("water.skipDip");
+		// (the feet's path over this tick)
+		double y = p.getY(), reach = y + s.vel.y * V1.SCALE / 20.0;
+		net.minecraft.util.math.BlockPos.Mutable bp = new net.minecraft.util.math.BlockPos.Mutable();
+		for (int by = (int) Math.floor(y + dip); by >= (int) Math.floor(reach - dip); by--) {
+			bp.set(p.getX(), by, p.getZ());
+			var fs = world.getFluidState(bp);
+			if (by <= Math.floor(y) && !world.getBlockState(bp).getCollisionShape(world, bp).isEmpty()) return; // ground first
+			if (!fs.isIn(net.minecraft.registry.tag.FluidTags.WATER)) continue;
+			double line = by + fs.getHeight(world, bp) - dip;
+			if (line > y + 0.01) return; // already under it: in the water
+			if (line < reach) return; // not reached this tick
+			// down to the line this tick, then the bounce
+			p.setPosition(p.getX(), line, p.getZ());
+			s.vel = new Vec3d(s.vel.x, Tune.get("water.skipUp"), s.vel.z);
+			com.ultracraft.client.UKSound.play("uk.environment.watersmallsplash", 0.65f, 1f);
+			return;
+		}
 	}
 
 	/**
@@ -881,6 +966,21 @@ public final class V1Movement {
 		Vec3d from = fx * fx + fz * fz < 0.0625 ? playerPos : origin;
 		launchFromPoint(s, playerPos, from, strength, maxDistance);
 		if (rocketPush) s.safeExplosionLaunchCooldown = 0.5;
+	}
+
+	/**
+	 * Explosion.Collide for a boosted blast: LaunchFromPointAtSpeed(from, max(60, V1's speed)) - away from the blast
+	 * (straight up when it is less than 0.25 u off V1's axis) at that speed, with up to half of it added upward, the
+	 * velocity set outright (Launch, ignoreMass). Not while explosionLaunchResistance runs.
+	 */
+	public static void boostedLaunch(V1 s, Vec3d playerPos, Vec3d origin, double minSpeed) {
+		if (s.explosionLaunchResistance > 0) return;
+		double fx = (origin.x - playerPos.x) / V1.SCALE, fz = (origin.z - playerPos.z) / V1.SCALE;
+		double speed = Math.max(minSpeed, s.vel.length());
+		Vec3d dir = fx * fx + fz * fz < 0.0625 ? new Vec3d(0, 1, 0) : playerPos.subtract(origin).normalize();
+		Vec3d v = dir.multiply(speed);
+		double up = Math.max(0, 0.5 * speed - v.y);
+		launch(s, v.add(0, up, 0), 100); // (launch divides by the 100 kg mass: ignoreMass)
 	}
 
 	public static void launchFromPoint(V1 s, Vec3d playerPos, Vec3d position, double strength, double maxDistance) {

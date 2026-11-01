@@ -248,8 +248,32 @@ public final class Damage {
 	 * `hitter`: the HitPayload kind (-1: none of the weaknesses); `electric`: the hit has the Electricity attribute;
 	 * `point`: where it landed (null: no one point, an explosion's), for the dragon's parts.
 	 */
-	public static void deal(ServerPlayerEntity shooter, LivingEntity target, float points, Vec3d dir, float force, int hitter, boolean electric, Vec3d point) {
-		LAST_POINTS.put(target, points);
+	/**
+	 * A hit that does no damage (the point-blank zone on an enemy not open to a parry): the knockback deal() gives and
+	 * the mob turned on the shooter, nothing else.
+	 */
+	public static void shove(ServerPlayerEntity shooter, LivingEntity target, Vec3d dir, float force) {
+		Profile p = profile(target);
+		target.setAttacker(shooter);
+		if (target instanceof net.minecraft.entity.mob.MobEntity mob && mob.getTarget() == null && !(mob instanceof net.minecraft.entity.passive.PassiveEntity)) mob.setTarget(shooter);
+		double push = p != null && p.boss() ? 0 : Math.min(2.5, force / 20000.0);
+		if (push > 0.01) target.addVelocity(dir.x * push * 0.2, 0.05 + push * 0.05, dir.z * push * 0.2);
+		target.velocityModified = true;
+	}
+
+	/**
+	 * Whether `points` from `shooter` would kill `target` (Zombie.GetHurt's health - num <= 0): never for a mob that
+	 * cannot be hurt (the Invulnerable tag, Resistance V or more - the game's invincible enemies keep their health).
+	 */
+	public static boolean wouldKill(ServerPlayerEntity shooter, LivingEntity target, float points, int hitter) {
+		if (target.isInvulnerableTo(source(shooter))) return false;
+		var res = target.getStatusEffect(net.minecraft.entity.effect.StatusEffects.RESISTANCE);
+		if (res != null && res.getAmplifier() >= 4) return false;
+		return amountFor(target, points, hitter, false) >= target.getHealth();
+	}
+
+	/** The Minecraft health `points` of ULTRAKILL damage take from `target` (its paired enemy's health, weakness, armour). */
+	public static float amountFor(LivingEntity target, float points, int hitter, boolean electric) {
 		Profile p = profile(target);
 		float amount;
 		if (p != null) {
@@ -258,6 +282,13 @@ public final class Damage {
 			amount = (float) (points * weakness(p, hitter, electric) * target.getMaxHealth() / uk);
 		} else amount = (float) (points * hpPerDamage);
 		if (p == null || !p.boss()) amount *= (float) armorFactor(target);
+		return amount;
+	}
+
+	public static void deal(ServerPlayerEntity shooter, LivingEntity target, float points, Vec3d dir, float force, int hitter, boolean electric, Vec3d point) {
+		LAST_POINTS.put(target, points);
+		Profile p = profile(target);
+		float amount = amountFor(target, points, hitter, electric);
 		DamageSource src = source(shooter);
 		// no i-frames between ULTRAKILL hits
 		target.timeUntilRegen = 0;

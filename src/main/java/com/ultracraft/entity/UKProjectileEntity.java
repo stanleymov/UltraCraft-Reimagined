@@ -162,6 +162,10 @@ public class UKProjectileEntity extends Entity {
 	private Vec3d sawOriginalVel = Vec3d.ZERO;
 	public int multiHit = 1;        // sawblades: hits allowed on one enemy
 	private final java.util.Map<Integer, Integer> sawHits = new java.util.HashMap<>();
+	/** Bodies this pellet already bled on its way through (Projectile.alreadyHitEnemies). */
+	private final java.util.Set<Integer> bledCorpses = new java.util.HashSet<>();
+	/** Pellet hits each dead body has bled so far (every pellet, every shot). */
+	private static final java.util.Map<LivingEntity, Integer> CORPSE_BLEEDS = new java.util.WeakHashMap<>();
 	/** A sawblade's speed (blocks a tick) and its magnetRotationDirection (0 = not yet picked). */
 	private double sawSpeed;
 	private int sawSpin;
@@ -895,8 +899,9 @@ public class UKProjectileEntity extends Entity {
 		// (wide: a mob is also tested where it was over the last ticks, as the player saw it, which can be blocks away)
 		// a punched pellet also goes off on a body still falling (Projectile.Collided: Explode before any dead check): the
 		// shotgun's point-blank zone often kills the mob a tick before the punch, and the blast flew through it (user)
-		boolean corpses = k == ProjectileKind.PELLET && isBoosted();
-		if (!(k.nail() && nailHit)) for (Entity e : world.getOtherEntities(this, new Box(start, end).expand(radius + 8), ent -> ent instanceof LivingEntity && (ent.isAlive() || corpses) && ent != sh)) {
+		// A plain pellet bleeds a body it meets too (Projectile.Collided: DeliverDamage on a dead enemy, then on through it)
+		boolean corpses = k == ProjectileKind.PELLET;
+		if (!(k.nail() && nailHit)) for (Entity e : world.getOtherEntities(this, new Box(start, end).expand(radius + 8), ent -> ent instanceof LivingEntity && (ent.isAlive() || (corpses && !bledCorpses.contains(ent.getId()))) && ent != sh)) {
 			// (a start inside the mob, pressed against V1, hits it there; a whiplashed mob is tested along its last step)
 			Optional<Vec3d> p = com.ultracraft.weapon.Hitscan.hitPoint(e, radius, start, end);
 			if (p.isPresent() && p.get().squaredDistanceTo(start) < best) {
@@ -1596,6 +1601,21 @@ public class UKProjectileEntity extends Entity {
 		switch (k) {
 			case PELLET -> {
 				if (isBoosted()) { Explosions.explode(world, sh, point, Explosions.PARRIED, false, "shotgun0", this); return; } // (hurts V1 near it: 35)
+				// a body already dead (killed by the point-blank shot or the boosted blast a moment ago): Projectile.Collided
+				// still delivers the hit - the corpse bleeds blood that heals - and the pellet flies on through it
+				if (!target.isAlive()) {
+					bledCorpses.add(target.getId());
+					// (the game's point-blank kill flings the ragdoll away - force 10000 - so only a few pellets still meet
+					// it; a Minecraft body stays where it fell: at most blood.corpseHits pellets bleed it)
+					int bled = CORPSE_BLEEDS.merge(target, 1, Integer::sum);
+					if (sh != null && bled <= com.ultracraft.weapon.ServerTune.get("blood.corpseHits", 3)) {
+						com.ultracraft.weapon.BloodHeal.onHit(sh, target, damage, HitPayload.SHOTGUN, point, false);
+						Net.toNear(world, point, new HitPayload(HitPayload.ENEMY_HIT, HitPayload.SHOTGUN, head ? 1 : 0, Damage.flags(target), point));
+					}
+					// (it goes on next tick, the body left out: a wall behind it is still met)
+					setVelocity(v);
+					return;
+				}
 				deal(sh, target, damage, dir, 1000f, HitPayload.SHOTGUN, head, point);
 				if (sh != null) com.ultracraft.weapon.ParryServer.pelletSpent(sh, point);
 				discard();

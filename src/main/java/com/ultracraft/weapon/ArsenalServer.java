@@ -100,6 +100,13 @@ public final class ArsenalServer {
 					// (a creeper about to blow: a shooting parry too, its blast becomes V1's below)
 					boolean creeper = ParryServer.tryParryCreeper(p, t);
 					boolean parried = creeper || ParryServer.tryParryMelee(p, t);
+					// Zombie / Machine / Statue.GetHurt: on an enemy not open to a parry the zone's damage is 0 - no blood -
+					// unless it would kill it (target == chest && health - num <= 0). It still knocks the enemy back
+					// (KnockBack(force / 100) comes first) and turns it on V1 (DeliverDamage: target = the player)
+					if (!parried && !Damage.wouldKill(p, t, 4f, HitPayload.SHOTGUNZONE)) {
+						Damage.shove(p, t, dir, 10000f);
+						continue;
+					}
 					Damage.deal(p, t, parried ? 8f : 4f, dir, 10000f, HitPayload.SHOTGUNZONE, hit.get());
 					if (parried) ParryServer.shotSuccess(p, hit.get());
 					boolean killed = wasAlive && !t.isAlive();

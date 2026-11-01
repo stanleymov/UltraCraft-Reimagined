@@ -146,7 +146,8 @@ def export(key: str, out: str, animator_name=None):
                     seg = mh.m_IndexBuffer[start:start + sm.indexCount]
                     tris.extend(int(x) for x in seg)
                     subs.append({"first": first, "count": len(seg), "material": mats[si]["name"] if si < len(mats) else None,
-                                 "texture": mats[si]["texture"] if si < len(mats) else None})
+                                 "texture": mats[si]["texture"] if si < len(mats) else None,
+                                 "color": mats[si]["color"] if si < len(mats) else None})
                 entry.update({"vertices": flatten(verts, 3), "normals": flatten(mh.m_Normals or [], 3), "uvs": flatten(mh.m_UV0 or [], 2),
                               "boneIndices": [0, 0, 0, 0] * n, "boneWeights": [1.0, 0.0, 0.0, 0.0] * n, "indices": tris, "submeshes": subs})
             except Exception as ex:  # noqa: BLE001

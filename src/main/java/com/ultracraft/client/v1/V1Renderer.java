@@ -72,8 +72,96 @@ public final class V1Renderer {
 
 	private V1Renderer() {}
 
+	private static final double TP_SLIDE_LIFT = Tune.def("tp.slideLift", 0.15, "blocks the third-person model is raised while it plays Sliding (its legs sank into the ground)");
+	private static final double TP_HATS = Tune.def("tp.seasonalHats", 1, "1 = V1 wears ULTRAKILL's seasonal hats on their dates (the game's Seasonal Events option)");
+	/** The prefab's Seasonal Hats meshes (an older jar's rig has only the Pumpkin). */
+	private static final java.util.Set<String> HATS = java.util.Set.of("Pumpkin", "Christmas", "Easter");
+
+	/**
+	 * SeasonalHats.Start: the hat for today's date - Christmas 22-28 December, the Halloween pumpkin 25-31 October,
+	 * Easter's on Easter Sunday and the two days before - or null.
+	 */
+	private static String seasonalHat() {
+		if (hatOverride != null) return hatOverride.isEmpty() ? null : hatOverride;
+		if (!Tune.on("tp.seasonalHats")) return null;
+		java.time.LocalDate d = java.time.LocalDate.now();
+		if (d.getMonthValue() == 12) return d.getDayOfMonth() >= 22 && d.getDayOfMonth() <= 28 ? "Christmas" : null;
+		if (d.getMonthValue() == 10) return d.getDayOfMonth() >= 25 ? "Pumpkin" : null;
+		int easter = easter(d.getYear()).getDayOfYear();
+		return d.getDayOfYear() >= easter - 2 && d.getDayOfYear() <= easter ? "Easter" : null;
+	}
+
+	/** /ukv1 (debug, this client only): null = by date, "" = no hat, else that hat's mesh name. */
+	private static String hatOverride;
+
+	/**
+	 * /ukv1 normal|pumpkin|christmas|easter|date: V1 drawn without a hat, with one hat whatever the date, or back to
+	 * the date's hat. Client side, so it changes only how this game draws V1s.
+	 */
+	public static void registerCommands(net.minecraftforge.client.event.RegisterClientCommandsEvent e) {
+		var root = net.minecraft.server.command.CommandManager.literal("ukv1")
+			.then(net.minecraft.server.command.CommandManager.literal("normal").executes(c -> setHat(c.getSource(), "", "V1 without a hat")))
+			.then(net.minecraft.server.command.CommandManager.literal("date").executes(c -> setHat(c.getSource(), null, "V1's hat by the date again")));
+		for (String hat : new String[] {"Pumpkin", "Christmas", "Easter"})
+			root.then(net.minecraft.server.command.CommandManager.literal(hat.toLowerCase(java.util.Locale.ROOT))
+				.executes(c -> setHat(c.getSource(), hat, "V1 with the " + hat + " hat")));
+		e.getDispatcher().register(root);
+	}
+
+	private static int setHat(net.minecraft.server.command.ServerCommandSource src, String hat, String msg) {
+		hatOverride = hat;
+		src.sendFeedback(() -> net.minecraft.text.Text.literal(msg), false);
+		return 1;
+	}
+
+	/** SeasonalHats.GetEaster (the anonymous Gregorian computus, as the game has it). */
+	private static java.time.LocalDate easter(int year) {
+		int num = year % 19, num2 = year / 100;
+		int num3 = (num2 - num2 / 4 - (8 * num2 + 13) / 25 + 19 * num + 15) % 30;
+		int num4 = num3 - num3 / 28 * (1 - num3 / 28 * (29 / (num3 + 1)) * ((21 - num) / 11));
+		int num5 = num4 - (year + year / 4 + num4 + 2 - num2 + num2 / 4) % 7;
+		int month = 3 + (num5 + 40) / 44;
+		int day = num5 + 28 - 31 * (month / 4);
+		return java.time.LocalDate.of(year, month, day);
+	}
+
+	/**
+	 * Clash mode lava (PlatformerMovement.Burn): a still copy of V1 in the pose it has right now (the clip held where it
+	 * is), every mesh drawn with the Charcoal material's texture (SandboxUtils.StripForPreview with burnMaterial).
+	 */
+	public static RigInstance charcoalCopy(PlayerEntity p) {
+		State st = STATES.get(p);
+		UkRig rig = UkAssets.rig("v1");
+		if (st == null || st.rig == null || rig == null) return null;
+		RigInstance c = new RigInstance("v1", rig);
+		c.play(st.rig.currentClip() != null ? st.rig.currentClip() : "Idle", 0, 0, st.rig.clipTime());
+		c.hiddenMeshes.addAll(st.rig.hiddenMeshes);
+		for (int i = 0; i < rig.meshes.size(); i++) c.meshTexture.put(i, "charcoal");
+		return c;
+	}
+
+	/** The model's turn and scale at the feet, as onRenderPlayer sets them (for a copy standing at `yaw`). */
+	public static Matrix4f copyMatrix(float yaw) {
+		float s = (float) (BASE_SCALE * Tune.get("tp.scale"));
+		return new Matrix4f().rotateY((float) Math.toRadians(Tune.get("tp.yaw") - yaw)).scale(s);
+	}
+
+	/** Draw a copy from charcoalCopy with the stack at its feet. */
+	public static void renderCopy(RigInstance c, MatrixStack ms, VertexConsumerProvider buffers, int light, float yaw) {
+		ms.push();
+		ms.multiplyPositionMatrix(copyMatrix(yaw));
+		c.pose(new Matrix4f());
+		c.render(ms, buffers, light, OverlayTexture.DEFAULT_UV, ViewModel.TEXTURES, false);
+		ms.pop();
+	}
+
 	public static void onRenderPlayer(RenderPlayerEvent.Pre e) {
 		if (!Tune.on("tp.show") || !UkAssets.available()) return;
+		// burnt in clash-mode lava: the charcoal copy and then the ash stand in for the model
+		if (!inGui && e.getEntity() == MinecraftClient.getInstance().player && V1Burn.hidesLive(e.getEntity())) {
+			e.setCanceled(true);
+			return;
+		}
 		UkRig rig = UkAssets.rig("v1");
 		if (rig == null) return;
 		PlayerEntity p = e.getEntity();
@@ -84,6 +172,12 @@ public final class V1Renderer {
 			st.anim = "Idle";
 		}
 		e.setCanceled(true);
+		String hat = seasonalHat();
+		for (int i = 0; i < rig.meshes.size(); i++) {
+			String n = rig.meshes.get(i).name;
+			if (HATS.contains(n) && !n.equals(hat)) st.rig.hiddenMeshes.add(i);
+			else st.rig.hiddenMeshes.remove(i);
+		}
 		float tickDelta = e.getPartialTick();
 		long now = System.nanoTime();
 		float dt = st.lastNanos == 0 ? 0 : Math.min(0.1f, (now - st.lastNanos) / 1e9f);
@@ -102,7 +196,15 @@ public final class V1Renderer {
 		// interpolating there swings the model and gun every tick: use the current values whenever a screen is open
 		boolean gui = client.currentScreen != null;
 		float yaw = gui ? p.bodyYaw : MathHelper.lerp(tickDelta, p.prevBodyYaw, p.bodyYaw);
+		// clash mode slide (PlatformerMovement): the model faces the slide's dodgeDirection, whatever the camera does
+		if (!inGui && local && V1.INSTANCE.sliding && !client.options.getPerspective().isFirstPerson()) {
+			Vec3d d = V1.INSTANCE.dodgeDirection.lengthSquared() > 1e-6 ? V1.INSTANCE.dodgeDirection : new Vec3d(V1.INSTANCE.vel.x, 0, V1.INSTANCE.vel.z);
+			if (d.lengthSquared() > 1e-6) yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z));
+		}
 		ms.push();
+		// sliding, the legs sank into the ground and only the toes showed above it (user): the model is lifted (by eye)
+		String clipNow = st.rig.currentClip() != null ? st.rig.currentClip() : st.anim;
+		if (is(clipNow, "Sliding")) ms.translate(0, Tune.get("tp.slideLift"), 0);
 		ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) (Tune.get("tp.yaw") - yaw)));
 		// clash mode spin: PlatformerMovement rotates the model 3600°/s about its up while spinning (spinJuice 1 → 0 at 3/s)
 		if (!inGui && p == client.player && V1.INSTANCE.clashSpinUntil > System.nanoTime()) {

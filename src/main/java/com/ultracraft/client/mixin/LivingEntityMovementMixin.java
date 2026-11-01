@@ -15,6 +15,13 @@ abstract class LivingEntityMovementMixin {
 	@Inject(method = "travel", at = @At("HEAD"), cancellable = true)
 	private void ultracraft$travel(Vec3d movementInput, CallbackInfo ci) {
 		if ((Object) this instanceof ClientPlayerEntity p && p.isMainPlayer()) {
+			// burning in clash-mode lava: V1 stands where it burnt until it dies
+			if (com.ultracraft.client.v1.V1Burn.holding()) {
+				p.setVelocity(Vec3d.ZERO);
+				ci.cancel();
+				return;
+			}
+			V1Movement.lavaBounce(p);
 			if (V1Movement.active(p)) {
 				V1Movement.travel(p);
 				ci.cancel();

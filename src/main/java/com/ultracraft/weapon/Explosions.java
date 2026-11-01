@@ -59,8 +59,7 @@ public final class Explosions {
 		Gasoline.onExplosion(world, shooter, pos, 3);
 		// the plants in the blast go (the user's ask; no other block is touched, as in ULTRAKILL)
 		Plants.blast(world, shooter, pos, radius);
-		// the blast reaches the enemies before V1 (the user's point-blank shotgun parry: their blood heals first, then the
-		// blast hurts - 100 - 23 = 77 at full health in the game), so V1 comes last
+		// the blast reaches the enemies before V1, so V1 comes last (their blood only heals from the next tick: BloodHeal)
 		java.util.List<Entity> caught = new java.util.ArrayList<>(world.getOtherEntities(null, new Box(pos, pos).expand(radius)));
 		caught.sort(java.util.Comparator.comparingInt(x -> x instanceof ServerPlayerEntity ? 1 : 0));
 		for (Entity e : caught) {
@@ -81,7 +80,9 @@ public final class Explosions {
 				int hurt = 0;
 				if (hurtPlayer && dist <= radius * ServerTune.get("explosion.playerHurtOuter", 1.0))
 					hurt = dist <= radius * ServerTune.get("explosion.playerHurt", 0.5) ? spec.damage() : Math.round(spec.damage() / 1.5f);
-				if (spec.fxKind() != 3 && spec.fxKind() != 4) launchPlayer(p, pos, dist, spec, harmless, hurt);
+				// (a boosted shotgun pellet's blast: Explosion.boosted, set by Projectile.CreateExplosionEffect)
+				boolean boosted = spec == PARRIED && "shotgun0".equals(hitterWeapon);
+				if (spec.fxKind() != 3 && spec.fxKind() != 4) launchPlayer(p, pos, dist, spec, harmless, hurt, boosted);
 				if (hurt > 0 && !harmless) BloodHeal.exploded(p, hurt);
 				continue;
 			}
@@ -99,9 +100,17 @@ public final class Explosions {
 		}
 	}
 
-	/** Explosion.Collide's player branch → LaunchFromPoint on the client (V1 owns its velocity). */
-	private static void launchPlayer(ServerPlayerEntity p, Vec3d pos, double dist, Spec spec, boolean harmless, int hurt) {
+	/**
+	 * Explosion.Collide's player branch → LaunchFromPoint on the client (V1 owns its velocity). A boosted pellet's blast
+	 * launches with LaunchFromPointAtSpeed(max(60, V1's speed)) instead: the same throw anywhere in the blast.
+	 */
+	private static void launchPlayer(ServerPlayerEntity p, Vec3d pos, double dist, Spec spec, boolean harmless, int hurt, boolean boosted) {
 		int strength = 200;
+		if (boosted) {
+			Net.toPlayer(p, new LaunchPayload(pos, 60, spec.maxSize(), hurt, false, true));
+			if (hurt > 0) p.damage(p.getDamageSources().explosion(null, null), hurt / 5f);
+			return;
+		}
 		if (hurt <= 0 && !harmless) {
 			Net.toPlayer(p, new LaunchPayload(pos, strength, spec.maxSize(), 0, false));
 			return;

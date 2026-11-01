@@ -392,6 +392,15 @@ public final class RigInstance {
 		return null;
 	}
 
+	public int rigBoneCount() {
+		return rig.bones.size();
+	}
+
+	/** World (mount-space) matrix of bone `i` after the last pose(). */
+	public Matrix4f boneWorldAt(int i) {
+		return world[i];
+	}
+
 	public Matrix4f boneWorld(String path) {
 		int i = rig.boneIndex(path);
 		return i < 0 ? null : world[i];

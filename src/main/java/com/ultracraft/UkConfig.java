@@ -12,6 +12,7 @@ public final class UkConfig {
 	public static final ForgeConfigSpec.BooleanValue OFFHAND_WEAPONS;
 	public static final ForgeConfigSpec.BooleanValue AIR_BRAKE;
 	public static final ForgeConfigSpec.BooleanValue SHORT_HOP;
+	public static final ForgeConfigSpec.BooleanValue LAVA_BOUNCE;
 
 	static {
 		ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -28,6 +29,7 @@ public final class UkConfig {
 		b.pop();
 		b.push("gameplay");
 		DROWNING = b.comment("Minecraft drowning under water (V1 has no air to run out of in ULTRAKILL: off by default)").define("drowning", false);
+		LAVA_BOUNCE = b.comment("ULTRAKILL's lava: touching lava throws V1 back out and costs 20 of its 100 health (2 hearts) at most once a second, without Minecraft's burning; off: Minecraft's lava").define("lavaBounce", true);
 		OFFHAND_WEAPONS = b.comment("An ULTRAKILL weapon in the off-hand slot is drawn on the left (mirrored, like ULTRAKILL's dual wield) and fires together with the main-hand weapon on left and right click; off: it is only held like any other item").define("offhandWeapons", true);
 		b.pop();
 		SPEC = b.build();
@@ -58,6 +60,10 @@ public final class UkConfig {
 
 	public static boolean shortHop() {
 		return SPEC.isLoaded() && SHORT_HOP.get();
+	}
+
+	public static boolean lavaBounce() {
+		return !SPEC.isLoaded() || LAVA_BOUNCE.get();
 	}
 
 	public static boolean parryFlash() {

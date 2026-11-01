@@ -69,6 +69,19 @@ straight to it.
 
 <img src="docs/images/grapple_orb_recipe.png" width="520" alt="The Grapple Orb's crafting recipe: Green Stained Glass all round, an Ender Pearl in the centre">
 
+## Clash Mode
+
+Press **F5** for third person and V1 plays like ULTRAKILL's **Clash Mode**, the cheat that turns the game into a
+third-person platformer:
+
+- **Spin attack**: attack to spin. The spin kills the enemies it hits; bosses take a hit instead.
+- **V1's own model and animations**: running, jumping, sliding, landing, and the ground slam with its wind-up in the
+  air.
+- **No guns**: V1 fights with the spin. Back in first person, your weapon comes out again.
+- **Lava**: with the ULTRAKILL lava setting on, lava burns V1 to ash, as it does in ULTRAKILL's Clash Mode.
+
+![V1's spin attack killing a husk in Clash Mode](docs/images/clash_spin.jpg)
+
 ## Installing
 
 You need **ULTRAKILL** (Steam; the base game, no DLC needed), **Minecraft Java Edition** and a modding launcher:
@@ -84,6 +97,8 @@ You need **ULTRAKILL** (Steam; the base game, no DLC needed), **Minecraft Java E
 
 The setup is also the updater: run a newer one over your install. When an update brings no new ULTRAKILL files, it
 only replaces the code and doesn't need ULTRAKILL.
+
+![V1 sliding in Clash Mode](docs/images/clash_slide.jpg)
 
 ## No game files here: bring your own
 
@@ -114,5 +129,8 @@ please don't share it; share the setup instead.
 Building from source: `./gradlew build codeJar` (JDK 17). The mod needs the converted ULTRAKILL content in
 `src/main/resources/assets/ultracraft/` (git-ignored), which `tools/extract/build_assets.py` builds from an ULTRAKILL
 install. `python installer/build_package.py --zip` then makes the setup download from the code-only jar.
+
+The screenshots were taken with [Complementary Shaders: Unbound](https://www.complementary.dev/) (r5.9.3) by EminGT, running
+through [Oculus](https://www.curseforge.com/minecraft/mc-mods/oculus) and [Embeddium](https://www.curseforge.com/minecraft/mc-mods/embeddium). They are not part of UltraCraft Reimagined.
 
 Code: all rights reserved, StanleyMOV.

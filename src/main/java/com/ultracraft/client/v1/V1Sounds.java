@@ -136,6 +136,25 @@ public final class V1Sounds {
 		UKSound.play("uk.weapons.revolver.ricochet", 0.5f, 1.5f);
 	}
 
+	private static boolean wallScraping;
+
+	/**
+	 * NewMovement.CreateWallScrape / DetachWallScrape: while V1 slides down a wall (Cling), the generic WallScrape loops -
+	 * "wallcling" at 0.7 - on every wall. (The game's footstep sets put a surface loop on top for dirt, grass, wood and so
+	 * on; left out: only the plain stone/concrete scrape, user.) `wallNormal` null: off the wall, the scrape stops.
+	 */
+	public static void wallScrape(ClientPlayerEntity p, net.minecraft.util.math.Vec3d wallNormal) {
+		if (wallNormal == null) {
+			if (!wallScraping) return;
+			wallScraping = false;
+			UKSound.stop("wallscrape");
+			return;
+		}
+		if (wallScraping) return;
+		wallScraping = true;
+		UKSound.loopAs("wallscrape", "uk.movement.wallcling", 0.7f, 1f);
+	}
+
 	public static void wallJump(ClientPlayerEntity p, int count, net.minecraft.util.math.Vec3d wallNormal) {
 		UKSound.play("uk.movement.bluezone-autobots-footstep-013", 1f, 1f);
 		// PlayerFootsteps.WallJump(wallPoint): the wall's surface step at 0.5, at once

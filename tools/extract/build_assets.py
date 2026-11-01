@@ -72,7 +72,9 @@ TEXTURE_PREFIXES = ["Assets/Models/V1/", "Assets/Models/Weapons/", "Assets/Textu
                     "Assets/Textures/White.png", "Assets/Textures/Dev/Black.png", "Assets/Textures/Dev/Basic Color - Yellow", "Assets/Textures/Sprites/charge.png", "Assets/Textures/Dev/Bonus.jpg",
                     "Assets/Textures/WhiplashWire.png", "Assets/Models/Objects/Terminals/", "Assets/Textures/sawblade.png", "Assets/Textures/sawblade 1.png", "Assets/Textures/Dev/Basic Color - Orange",
                     # effects: muzzle flashes, blood, sparks, lightning, beams, the Sharpshooter splash
-                    "Assets/Textures/Sprites/muzzleflash", "Assets/Textures/Blood/", "Assets/Textures/Dev/spark", "Assets/Textures/Sprites/lightning", "Assets/Textures/Sprites/projectilebeam", "Assets/Textures/Sprites/splash"]
+                    "Assets/Textures/Sprites/muzzleflash", "Assets/Textures/Blood/", "Assets/Textures/Dev/spark", "Assets/Textures/Sprites/lightning", "Assets/Textures/Sprites/projectilebeam", "Assets/Textures/Sprites/splash",
+                    # the Charcoal material (clash mode's burnt V1)
+                    "Assets/Textures/Layer 1/charcoal.png"]
 # icons used as item textures (the HUD draws the same sprites at their own aspect)
 EMISSIVE_ALPHA = ["T_PistolNew_Emissive", "v1_wingcolour_emissive_colorless", "T_MinosRevolver_128_Emissive", "T_Railcannon_Emission", "T_Nailgun_New_Glow",
                   # (the hammer's dial glows stay as they are: coloured on black, added on)
@@ -91,6 +93,8 @@ SOUND_PREFIXES = ["Assets/Sounds/Weapons/", "Assets/Sounds/Movement/", "Assets/S
                   "Assets/Sounds/Environment/Water",
                   # FireSimple's loop (FireSmall) on burning gasoline, and the other fire clips
                   "Assets/Sounds/Environment/Fire",
+                  # clash mode burning (PlatformerMovement.Burn): HotSand (defaultBurnEffect) and CrashAshes (ashSound)
+                  "Assets/Sounds/Environment/HotSand", "Assets/Sounds/Environment/CrashAshes",
                   # the grapple point's hum (GrapplePoint's AudioSource: loop, volume 0.35)
                   "Assets/Sounds/Environment/CheckpointAmbiance",
                   # the Impact Hammer's overheat steam (ShotgunHammer.overheatAud: steamLoop3, 0.75, pitch 0.75)
@@ -166,6 +170,13 @@ def layout():
                 if t:
                     sm["texture"] = ident(t)
                     used_tex.add(t)
+                    # V1's seasonal hats colour plain textures with their material (Easter: white + pink): baked into a
+                    # tinted copy, as the rig draws one colour per mesh
+                    c = sm.get("color")
+                    if "Seasonal Hats" in m.get("node", "") and c and any(abs(x - 1) > 0.01 for x in c[:3]):
+                        stem = ident(t) + "_tint_" + "".join(f"{round(x * 255):02x}" for x in c[:3])
+                        TINTED[stem] = (ident(t), c[:3])
+                        sm["texture"] = stem
             if m.get("texture"):
                 used_tex.add(m["texture"])
                 m["texture"] = ident(m["texture"])
@@ -210,6 +221,8 @@ def layout():
                  "verticalgradient", "verticalgradientslowfalloff",
                  # GasolineStain's splat atlas (5 x 32 px: green = the puddle, magenta = its rim and drops)
                  "Bloodsplatter_Atlas 1",
+                 # clash mode burning: PlatformerMovement.burnMaterial (Charcoal) on the burnt copy of V1
+                 "charcoal",
                  # the grapple point's glow square (Square: Sprites-Default)
                  "glow 2",
                  # the Impact Hammer: its glow (lights), the dial's tier glows, the secondary meter's radial mask and the
@@ -552,7 +565,34 @@ EMBEDDED_TEXTURES = [("Assets/Prefabs/Attacks and Projectiles/Zapper.prefab", "f
                      # Fire (the burning enemies' fire): the same sheet at 64 px a frame
                      ("Assets/Particles/Fire.prefab", "fire1_64", "fire1_64"),
                      # the grapple point's arches (Metal Decoration 1B Orange: its vertex blend is unpainted, so the base texture shows)
-                     ("Assets/Prefabs/Levels/Interactive/GrapplePoint.prefab", "floordecoration1b", "floordecoration1b")]
+                     ("Assets/Prefabs/Levels/Interactive/GrapplePoint.prefab", "floordecoration1b", "floordecoration1b"),
+                     # V1's seasonal hats (third person): the Halloween pumpkin, the Christmas hat (Bonus + white) and Easter's
+                     ("Assets/Prefabs/Player/PlatformerController.prefab", "Pumpkin_Malicious", "pumpkin_malicious"),
+                     ("Assets/Prefabs/Player/PlatformerController.prefab", "Bonus", "bonus"),
+                     ("Assets/Prefabs/Player/PlatformerController.prefab", "Basic Color - White", "basic_color_-_white")]
+
+
+# tinted texture copies the layout asked for: stem -> (source stem, rgb 0..1); made once the textures are all out
+TINTED = {}
+
+
+def bake_tinted():
+    try:
+        from PIL import Image
+    except ImportError as e:
+        print("tinted textures not made:", e)
+        return
+    tex_dst = os.path.join(RES, "textures", "uk")
+    for stem, (src, rgb) in TINTED.items():
+        p = os.path.join(tex_dst, src + ".png")
+        if not os.path.isfile(p):
+            print("tint source missing:", src)
+            continue
+        im = Image.open(p).convert("RGBA")
+        px = [(round(r * rgb[0]), round(g * rgb[1]), round(b * rgb[2]), a) for r, g, b, a in im.getdata()]
+        im.putdata(px)
+        im.save(os.path.join(tex_dst, stem + ".png"))
+        print("tinted texture", stem)
 
 
 def export_embedded_textures():
@@ -664,5 +704,6 @@ if __name__ == "__main__":
     layout_shop()
     export_texture_arrays()
     export_embedded_textures()
+    bake_tinted()
     bake_fire()
     export_digit_strip()

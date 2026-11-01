@@ -20,9 +20,10 @@ import java.util.List;
  * <li>Body (a body or limb hit of 1+ or a kill; the game's Limb is 20 hp in 6 u): 10 hp, 5 u</li>
  * <li>Small (any lighter hit): 10 hp, 5 u</li>
  * </ul>
+ * Shotgun, point-blank and explosion blood is worth 3 whatever the gore, a nail's 1 (the enemies set hpAmount by hitter).
  * Blood an explosion spilled heals nothing while V1 is "exploded" (NewMovement.GetHealth: exploded && fromExplosion):
- * hurt by a blast, until its hurt invincibility ends (0.5 s, 0.8 s for 50+) or a parry. The blast reaches the enemies
- * first (Explosions sorts V1 last), so their blood heals before the blast hurts.
+ * hurt by a blast, until its hurt invincibility ends (0.5 s, 0.8 s for 50+) or a parry. Splashes heal from the next
+ * tick on, so a blast's own blood is too late once the same blast has hurt V1.
  * V1's 100 hp is the player's 20 HP (x5).
  */
 public final class BloodHeal {
@@ -65,12 +66,23 @@ public final class BloodHeal {
 		boolean head = point != null && point.y >= target.getY() + target.getHeight() * 0.8;
 		boolean full = points >= 1 || killed;
 		boolean headBlood = hitter == HitPayload.HAMMER || (head && full);
-		int hp = headBlood ? 30 : 10;
-		double radiusU = headBlood ? 7 : 5;
 		boolean fromExplosion = hitter == HitPayload.EXPLOSION || hitter == Damage.PARRIED_BLAST || hitter == Damage.ROCKET_BLAST;
-		Splash s = new Splash(shooter, at, radiusU * Damage.SCALE_BLOCKS, hp, fromExplosion, new int[] {5});
-		// (a blast's blood is checked at once, before the same blast reaches V1)
-		if (!(fromExplosion && drink(s))) splashes.add(s);
+		// Zombie / Machine / Statue.GetHurt: the gore of a "shotgun", "shotgunzone" or "explosion" hit is set to hpAmount 3,
+		// a "nail" hit's to 1; any other keeps its prefab's (BS Head 30, Body / Small 10)
+		int hp = hitter == HitPayload.SHOTGUN || hitter == HitPayload.SHOTGUNZONE || fromExplosion ? 3
+			: hitter == HitPayload.NAIL ? 1 : headBlood ? 30 : 10;
+		double radiusU = headBlood ? 7 : 5;
+		// (a blast's blood waits for the next tick like any other: the same blast has reached V1 by then and, if it hurt
+		// it, V1 is exploded - Bloodsplatter heals on OnTriggerEnter, a physics step after the Explosion hurt the player.
+		// The user's ULTRAKILL test: a boosted blast on a blind Swordsmachine costs 8 every time, 35 against 9 pellets x 3)
+		splashes.add(new Splash(shooter, at, radiusU * Damage.SCALE_BLOCKS, hp, fromExplosion, new int[] {5}));
+		// Zombie.ChestExplosion: the point-blank shot (shotgunzone: chestHP 0) killing through the body bursts the chest -
+		// one Body splash of 10 for every hit part under it (Filth 2, Soldier 6, Stray 8; blood.chestParts for a mob)
+		if (killed && !head && hitter == HitPayload.SHOTGUNZONE) {
+			Vec3d chest = target.getBoundingBox().getCenter();
+			for (int i = 0; i < (int) ServerTune.get("blood.chestParts", 6); i++)
+				splashes.add(new Splash(shooter, chest, 5 * Damage.SCALE_BLOCKS, 10, false, new int[] {5}));
+		}
 	}
 
 	/** True if `s` healed its player now (V1 inside its sphere and, for blast blood, not exploded). */

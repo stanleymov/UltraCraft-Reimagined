@@ -21,6 +21,10 @@ public record FirePayload(int weapon, int mode, int arg, Vec3d origin, Vec3d dir
 	public static final int VIEW_HIT = 10;
 	/** A slam landing on an enemy (GroundCheck.OnTriggerEnter while heavyFall): arg = entity id. */
 	public static final int STOMP = 11;
+	/** V1 touched lava with the ULTRAKILL lava option on (HurtZone, Lava: 20 damage a second, no burning). */
+	public static final int LAVA = 12;
+	/** Clash mode: V1 touched ULTRAKILL lava and burns to ash (killed 2 s later). */
+	public static final int LAVA_BURN = 13;
 	/** mode 9 on any weapon = variation switch (arg = new variation). */
 	public static final int MODE_VARIATION = 9;
 

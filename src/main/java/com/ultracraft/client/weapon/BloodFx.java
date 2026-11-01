@@ -35,6 +35,7 @@ public final class BloodFx {
 	private static final double SIZE = Tune.def("fx.bloodSize", 0.22, "blood drop quad size, u");
 	private static final double STAIN_LIFE = Tune.def("fx.bloodStainLife", 40, "seconds a blood stain stays");
 	private static final double ON = Tune.def("fx.blood", 1, "0 = no blood");
+	private static final double TOWARD_YOU = Tune.def("fx.bloodTowardYou", 0.5, "share of a hit's blood that sprays back at V1 (kills keep it all; user: half)");
 
 	private static final class Drop {
 		Vec3d pos, vel;
@@ -55,17 +56,25 @@ public final class BloodFx {
 
 	/** A wound at `pos`; `dir` is the direction the hit travelled (blood sprays back out along -dir and sideways). */
 	public static void spawn(Vec3d pos, Vec3d dir, float amount) {
+		spawn(pos, dir, amount, true);
+	}
+
+	/** `kill` false: a hit on a mob that lives on (or a body already down) - only fx.bloodTowardYou of its spray back at V1. */
+	public static void spawn(Vec3d pos, Vec3d dir, float amount, boolean kill) {
 		if (!Tune.on("fx.blood")) return;
 		int n = Math.max(3, Math.round((float) (Tune.get("fx.bloodDrops") * amount)));
 		Vec3d back = dir.lengthSquared() < 1e-6 ? new Vec3d(0, 1, 0) : dir.normalize().multiply(-1);
 		double s = Damage.SCALE_BLOCKS;
+		double towardYou = kill ? 1 : Tune.get("fx.bloodTowardYou");
 		for (int i = 0; i < n; i++) {
 			Drop d = new Drop();
 			d.pos = pos.add((rnd.nextDouble() - 0.5) * 0.15, (rnd.nextDouble() - 0.5) * 0.15, (rnd.nextDouble() - 0.5) * 0.15);
 			// 25° cone around -dir, plus a little of the hit's own momentum carrying through
 			Vec3d jitter = new Vec3d(rnd.nextGaussian(), rnd.nextGaussian(), rnd.nextGaussian()).multiply(0.45);
 			Vec3d v = back.add(jitter).normalize().multiply(Tune.get("fx.bloodSpeed") * (0.4 + rnd.nextDouble() * 0.8) * s);
-			if (rnd.nextInt(4) == 0) v = dir.normalize().multiply(Tune.get("fx.bloodSpeed") * 0.6 * s).add(jitter.multiply(2 * s));
+			boolean forward = rnd.nextInt(4) == 0;
+			if (!forward && rnd.nextDouble() >= towardYou) continue;
+			if (forward) v = dir.normalize().multiply(Tune.get("fx.bloodSpeed") * 0.6 * s).add(jitter.multiply(2 * s));
 			d.vel = v.add(0, 2 * s, 0);
 			d.life = 0.6f + rnd.nextFloat() * 0.8f;
 			d.size = (float) (Tune.get("fx.bloodSize") * s * (0.6 + rnd.nextDouble() * 0.8));

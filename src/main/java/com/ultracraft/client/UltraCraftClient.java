@@ -74,7 +74,8 @@ public final class UltraCraftClient {
 				MinecraftClient c = MinecraftClient.getInstance();
 				if (c.player == null) return;
 				// NewMovement's transform sits at the capsule centre
-				V1Movement.explosionLaunch(V1.INSTANCE, c.player.getPos().add(0, 0.9, 0), m.pos(), m.strength(), m.maxDistance(), m.rocketPush());
+				if (m.atSpeed()) V1Movement.boostedLaunch(V1.INSTANCE, c.player.getPos().add(0, 0.9, 0), m.pos(), m.strength());
+				else V1Movement.explosionLaunch(V1.INSTANCE, c.player.getPos().add(0, 0.9, 0), m.pos(), m.strength(), m.maxDistance(), m.rocketPush());
 			});
 		}));
 
@@ -171,6 +172,7 @@ public final class UltraCraftClient {
 		bus.addListener(HandRenderer::onRenderHand);
 		bus.addListener(com.ultracraft.client.shop.TerminalHighlight::onHighlight);
 		bus.addListener(com.ultracraft.client.v1.V1Renderer::onRenderPlayer);
+		bus.addListener(com.ultracraft.client.v1.V1Renderer::registerCommands);
 		bus.addListener(BeamRenderer::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.NailGhosts::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.MagnetFx::onRenderLevel);
@@ -178,6 +180,7 @@ public final class UltraCraftClient {
 		bus.addListener(com.ultracraft.client.weapon.GasolineClient::onRenderLevel);
 		bus.addListener(ExplosionFx::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.BloodFx::onRenderLevel);
+		bus.addListener(com.ultracraft.client.v1.V1Burn::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.ShockwaveFx::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.HammerFx::onRenderLevel);
 		bus.addListener(ProjectileRenderer::onRenderLevel);
