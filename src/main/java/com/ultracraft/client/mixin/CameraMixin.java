@@ -19,10 +19,18 @@ abstract class CameraMixin {
 
 	@Shadow protected abstract void moveBy(double forward, double up, double right);
 
+	@Shadow protected abstract void setPos(net.minecraft.util.math.Vec3d pos);
+
 	@Inject(method = "update", at = @At("TAIL"))
 	private void ultracraft$feel(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
 		V1 s = V1.INSTANCE;
 		if (thirdPerson) return;
+		// dying: the camera rides in the falling body's head (UkDeathScreen)
+		net.minecraft.util.math.Vec3d dead = com.ultracraft.client.hud.UkDeathScreen.cameraPos();
+		if (dead != null) {
+			this.setPos(dead);
+			return;
+		}
 		double drop = s.camDrop;
 		double shake = Math.max(0, s.shake);
 		double sx = 0, sy = 0;

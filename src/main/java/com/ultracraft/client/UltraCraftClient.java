@@ -173,6 +173,9 @@ public final class UltraCraftClient {
 		bus.addListener(com.ultracraft.client.shop.TerminalHighlight::onHighlight);
 		bus.addListener(com.ultracraft.client.v1.V1Renderer::onRenderPlayer);
 		bus.addListener(com.ultracraft.client.v1.V1Renderer::registerCommands);
+		bus.addListener(com.ultracraft.client.hud.UkDeathScreen::onScreenOpening);
+		bus.addListener(com.ultracraft.client.hud.UkDeathScreen::onCameraAngles);
+		bus.addListener(com.ultracraft.client.hud.UkDeathScreen::onOverlay);
 		bus.addListener(BeamRenderer::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.NailGhosts::onRenderLevel);
 		bus.addListener(com.ultracraft.client.weapon.MagnetFx::onRenderLevel);

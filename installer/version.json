@@ -1,5 +1,5 @@
 {
   "version": "1.0",
-  "content": 3,
+  "content": 5,
   "_content": "bump 'content' when the built ULTRAKILL files change (exporters, build_assets lists, sound copies)"
 }

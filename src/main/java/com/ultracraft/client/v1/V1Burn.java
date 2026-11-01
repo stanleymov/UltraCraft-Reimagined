@@ -48,6 +48,8 @@ public final class V1Burn {
 	private V1Burn() {}
 
 	private static boolean burning, burnt;
+	/** The player entity that burnt (a respawn makes a new one). */
+	private static PlayerEntity burntPlayer;
 	private static long startNanos;
 	private static RigInstance copy;
 	private static Vec3d pos;
@@ -72,12 +74,19 @@ public final class V1Burn {
 
 	/** V1 is burning: it stands where it burnt (no movement until it dies). */
 	public static boolean holding() {
+		MinecraftClient c = MinecraftClient.getInstance();
+		if (burning && c.player != null && c.player != burntPlayer) burning = false;
 		return burning;
 	}
 
 	/** The live model is not drawn while its charcoal copy stands or after it turned to ash, until V1 lives again. */
 	public static boolean hidesLive(PlayerEntity p) {
 		if (!burnt) return false;
+		// (the respawned V1 is a new entity: shown at once, even before a frame saw the old one dead)
+		if (p != burntPlayer) {
+			burning = burnt = false;
+			return false;
+		}
 		if (!burning && p.isAlive()) burnt = false;
 		return burnt;
 	}
@@ -87,6 +96,7 @@ public final class V1Burn {
 		MinecraftClient c = MinecraftClient.getInstance();
 		float td = c.getTickDelta();
 		burning = burnt = true;
+		burntPlayer = p;
 		startNanos = System.nanoTime();
 		pos = p.getLerpedPos(td);
 		yaw = MathHelper.lerp(td, p.prevBodyYaw, p.bodyYaw);
@@ -165,7 +175,8 @@ public final class V1Burn {
 			double t = (now - startNanos) / 1e9;
 			if (copy != null && t >= 1) becomeAsh();
 			// the server's kill comes 2 s in; a totem (or a lost packet) leaves V1 standing: let it go after 3 s
-			if ((c.player != null && !c.player.isAlive()) || t >= 3) burning = false;
+			// (a clash respawn can swap in the new player before any frame sees the old one dead)
+			if ((c.player != null && (c.player != burntPlayer || !c.player.isAlive())) || t >= 3) burning = false;
 		}
 		// (never a charcoal copy left standing once the burn is over)
 		if (!burning && copy != null) becomeAsh();
@@ -234,5 +245,6 @@ public final class V1Burn {
 		ash.clear();
 		copy = null;
 		burning = burnt = false;
+		burntPlayer = null;
 	}
 }

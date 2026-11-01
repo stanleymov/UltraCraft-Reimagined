@@ -95,6 +95,8 @@ SOUND_PREFIXES = ["Assets/Sounds/Weapons/", "Assets/Sounds/Movement/", "Assets/S
                   "Assets/Sounds/Environment/Fire",
                   # clash mode burning (PlatformerMovement.Burn): HotSand (defaultBurnEffect) and CrashAshes (ashSound)
                   "Assets/Sounds/Environment/HotSand", "Assets/Sounds/Environment/CrashAshes",
+                  # the death screen's BlackScreen loop (TVScreenBuzz, kept in the game's Unused folder)
+                  "Assets/Sounds/Unused/TVScreenBuzz",
                   # the grapple point's hum (GrapplePoint's AudioSource: loop, volume 0.35)
                   "Assets/Sounds/Environment/CheckpointAmbiance",
                   # the Impact Hammer's overheat steam (ShotgunHammer.overheatAud: steamLoop3, 0.75, pitch 0.75)
@@ -125,6 +127,8 @@ def export_all():
     # the Terminal's screen: the Shop prefab's canvas as a layout JSON + its sprites
     run(os.path.join(HERE, "export_canvas.py"), "Assets/Prefabs/Levels/Shop.prefab", "Shop", "Canvas",
         os.path.join(WORK, "shop", "shop_canvas.json"), os.path.join(WORK, "shop", "sprites"))
+    # the death screen's texts (DeathSequence's diagnostic log, BlackScreen's "you are dead")
+    run(os.path.join(HERE, "export_death.py"), os.path.join(WORK, "death", "death.json"))
     for rig, (key, anim) in RIGS.items():
         args = [os.path.join(HERE, "export_rig.py"), key, os.path.join(WORK, "rigs", rig + ".json")]
         if anim:
@@ -223,6 +227,8 @@ def layout():
                  "Bloodsplatter_Atlas 1",
                  # clash mode burning: PlatformerMovement.burnMaterial (Charcoal) on the burnt copy of V1
                  "charcoal",
+                 # the death screen: BlackScreen's crtbg, the LaughingSkull's two frames, the Flash's ISeeYou
+                 "crtbg", "SkullFrameDoubleA", "SkullFrameDoubleB", "ISeeYou",
                  # the grapple point's glow square (Square: Sprites-Default)
                  "glow 2",
                  # the Impact Hammer: its glow (lights), the dial's tier glows, the secondary meter's radial mask and the
@@ -682,6 +688,17 @@ def bake_fire():
         print("fire sprite baked:", stem)
 
 
+def layout_death():
+    """The death screen's texts -> uk/death.json."""
+    src = os.path.join(WORK, "death", "death.json")
+    if not os.path.isfile(src):
+        print("missing death screen texts:", src)
+        return
+    os.makedirs(os.path.join(RES, "uk"), exist_ok=True)
+    shutil.copyfile(src, os.path.join(RES, "uk", "death.json"))
+    print("death screen texts copied")
+
+
 def layout_shop():
     """The Terminal's screen layout -> uk/shop/shop_canvas.json, its sprites -> textures/uk/shop/."""
     src = os.path.join(WORK, "shop")
@@ -702,6 +719,7 @@ if __name__ == "__main__":
     export_embedded_sounds()
     layout()
     layout_shop()
+    layout_death()
     export_texture_arrays()
     export_embedded_textures()
     bake_tinted()
