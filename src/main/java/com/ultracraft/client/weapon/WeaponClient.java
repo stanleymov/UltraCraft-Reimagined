@@ -135,11 +135,19 @@ public final class WeaponClient {
 		return ViewModel.instance(currentFist == 1 ? "knuckleblaster" : "feedbacker");
 	}
 
+	/** A parry froze the game: when the freeze is over, the aim then goes to the server (ParryServer.reaim). */
+	private static boolean aimAfterParry;
+
 	public void tick(MinecraftClient client) {
 		ClientPlayerEntity p = client.player;
 		if (p == null || client.world == null) return;
 		Damage.configure(Tune.get("damage.hpPerPoint"), Tune.get("damage.headFraction"), Tune.get("damage.range"));
 		Damage.debug = Tune.on("debug.weapons");
+		// (no client ticks run through the freeze: this is its first tick after; the look turned with the mouse meanwhile)
+		if (aimAfterParry && !V1.INSTANCE.frozen()) {
+			aimAfterParry = false;
+			Net.toServer(new FirePayload(FirePayload.PARRY_AIM, 0, 0, p.getEyePos(), p.getRotationVec(1f)));
+		}
 		// (re)attach the animation-event listeners whenever the rigs were rebuilt (leaving and re-joining a world
 		// recreated them without listeners: ReadyGun / ReadyToPunch never came and no weapon fired again)
 		if (!hooked || hookedGen != ViewModel.generation) {
@@ -813,7 +821,7 @@ public final class WeaponClient {
 				UKSound.play("uk.weapons.punch_projectile", 1f, 1f);
 				// TimeController.ParryFlash: white flash 0.1 s + camera shake 0.5 (the hit-stop is not reproduced)
 				V1.INSTANCE.parryFlash = 0.1;
-				if (Tune.on("parry.freezeOn")) V1.INSTANCE.freeze(Tune.get("parry.freeze"));
+				if (Tune.on("parry.freezeOn")) { V1.INSTANCE.freeze(Tune.get("parry.freeze")); aimAfterParry = msg.arg() == 0; }
 				V1.INSTANCE.shake = Math.max(V1.INSTANCE.shake, 0.5);
 				// full stamina and no hard damage only for parrying something hostile (arg 1 = boosting your own pellets)
 				if (msg.arg() != 1) {

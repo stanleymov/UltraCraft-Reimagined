@@ -13,12 +13,18 @@ public final class UkConfig {
 	public static final ForgeConfigSpec.BooleanValue AIR_BRAKE;
 	public static final ForgeConfigSpec.BooleanValue SHORT_HOP;
 	public static final ForgeConfigSpec.BooleanValue LAVA_BOUNCE;
+	public static final ForgeConfigSpec.DoubleValue SOUND_VOLUME;
+	/** 100% on the volume slider: ULTRAKILL's sounds at this share of their own level, to sit with Minecraft's (user). */
+	public static final double SOUND_BASE = 0.8;
 
 	static {
 		ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
 		b.push("hud");
 		SPEEDOMETER = b.comment("Show the speedometer (SPEED: u/s) under the HUD, like ULTRAKILL's Speedometer option").define("speedometer", false);
 		PARRY_FLASH = b.comment("White screen flash on a successful parry (ULTRAKILL's Parry Flash option)").define("parryFlash", true);
+		b.pop();
+		b.push("sound");
+		SOUND_VOLUME = b.comment("Volume of UltraCraft's ULTRAKILL sounds: 1.0 (100%) is the default, 80% of ULTRAKILL's own level; 1.25 is ULTRAKILL's full level").defineInRange("volume", 1.0, 0.0, 1.25);
 		b.pop();
 		b.push("controls");
 		ZOOM_SENSITIVITY = b.comment("Mouse sensitivity while zoomed in with the railcannon, as a share of normal (ULTRAKILL scales it with the zoom; 0.4 by the user's choice)").defineInRange("zoomSensitivity", 0.4, 0.05, 1.0);
@@ -64,6 +70,11 @@ public final class UkConfig {
 
 	public static boolean lavaBounce() {
 		return !SPEC.isLoaded() || LAVA_BOUNCE.get();
+	}
+
+	/** What every UltraCraft sound's volume is multiplied by (the slider times the 80% base). */
+	public static double soundScale() {
+		return (SPEC.isLoaded() ? SOUND_VOLUME.get() : 1.0) * SOUND_BASE;
 	}
 
 	public static boolean parryFlash() {

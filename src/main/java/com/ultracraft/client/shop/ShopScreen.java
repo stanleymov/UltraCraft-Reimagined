@@ -959,6 +959,37 @@ public final class ShopScreen {
 		return false;
 	}
 
+	/** The purchase button last pressed (its window closes when the server says the purchase went through). */
+	private static int lastBuy = -1;
+
+	/**
+	 * A purchase went through (ShopSuccess): the variation's info window closes, as its own Back button closes it
+	 * (user: no need to press Back after buying). The game leaves it open.
+	 */
+	public static void bought(State st) {
+		int i = lastBuy;
+		lastBuy = -1;
+		if (st == null || i < 0 || i >= nodes.size()) return;
+		for (int w = nodes.get(i).parent; w >= 0; w = nodes.get(w).parent) {
+			for (int k = 0; k < nodes.size(); k++) {
+				Btn b = nodes.get(k).shop;
+				if (b == null || !within(k, w)) continue;
+				boolean closes = false;
+				for (int d : b.deactivate) if (d == w) closes = true;
+				if (!closes) continue;
+				for (int a : b.activate) if (a >= 0) st.active[a] = true;
+				for (int d : b.deactivate) if (d >= 0) st.active[d] = false;
+				return;
+			}
+		}
+	}
+
+	/** Node `k` is `w` or inside it. */
+	private static boolean within(int k, int w) {
+		for (; k >= 0; k = nodes.get(k).parent) if (k == w) return true;
+		return false;
+	}
+
 	/** ShopButton.OnPointerClick (or a plain Button): windows on and off, a purchase, the equipment toggle. */
 	public static void click(State st, int i) {
 		if (i < 0) return;
@@ -984,7 +1015,7 @@ public final class ShopScreen {
 		// the buy button: VariationInfo.WeaponBought (the server takes the P and answers with ShopSuccess / ShopFail)
 		if (n.buyOf >= 0 && nodes.get(n.buyOf).var.kind != null) {
 			Var v = nodes.get(n.buyOf).var;
-			if (!ShopClient.owns(v.kind, v.variation) || !carries(v.kind)) { ShopClient.buy(v.kind, v.variation); return; }
+			if (!ShopClient.owns(v.kind, v.variation) || !carries(v.kind)) { lastBuy = i; ShopClient.buy(v.kind, v.variation); return; }
 		}
 		com.ultracraft.client.UKSound.play("uk.ui.smileos2click", 1f, 1f);
 	}

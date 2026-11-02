@@ -107,8 +107,21 @@ public final class V1Sounds {
 		slideTick(p);
 	}
 
-	/** While sliding: a new surface under V1 swaps the scrape's layers. */
+	/**
+	 * While sliding: a new surface under V1 swaps the scrape's layers. Off the ground and off walls the game parks the
+	 * slideScrape object 5000 u away (NewMovement.Update), so the scrape is silent in the air - a slide off a ledge, the
+	 * skips across water - and starts again where V1 touches down.
+	 */
 	public static void slideTick(ClientPlayerEntity p) {
+		if (!V1.INSTANCE.onGround && !V1.INSTANCE.onWall) {
+			if (slideSurface != null) {
+				UKSound.stop("uk.movement.wallcling");
+				if (slideLayer != null) UKSound.stop(slideLayer);
+				slideLayer = null;
+				slideSurface = null;
+			}
+			return;
+		}
 		Surfaces s = Surfaces.under(p);
 		if (s == slideSurface) return;
 		slideSurface = s;

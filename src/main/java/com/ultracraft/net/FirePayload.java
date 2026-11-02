@@ -25,6 +25,8 @@ public record FirePayload(int weapon, int mode, int arg, Vec3d origin, Vec3d dir
 	public static final int LAVA = 12;
 	/** Clash mode: V1 touched ULTRAKILL lava and burns to ash (killed 2 s later). */
 	public static final int LAVA_BURN = 13;
+	/** The parry freeze is over: where V1 aims now (origin = eye, dir = look); what it just parried goes there (user). */
+	public static final int PARRY_AIM = 14;
 	/** mode 9 on any weapon = variation switch (arg = new variation). */
 	public static final int MODE_VARIATION = 9;
 

@@ -261,6 +261,45 @@ def new_profile_mods(launcher):
 
 # ------------------------------------------------------------------------------------- misc
 
+def exe_icon(exe):
+    """The largest image of a Windows exe's main icon (its first RT_GROUP_ICON), as an .ico file's bytes."""
+    import struct
+    b = Path(exe).read_bytes()
+    pe = struct.unpack_from("<I", b, 0x3C)[0]
+    nsec, optsize = struct.unpack_from("<H", b, pe + 6)[0], struct.unpack_from("<H", b, pe + 20)[0]
+    opt = pe + 24
+    rsrc_rva = struct.unpack_from("<I", b, opt + (112 if struct.unpack_from("<H", b, opt)[0] == 0x20B else 96) + 16)[0]
+    secs = [struct.unpack_from("<IIII", b, opt + optsize + 40 * i + 8) for i in range(nsec)]  # vsize, va, rawsize, raw
+
+    def off(rva):
+        for vsize, va, rawsize, raw in secs:
+            if va <= rva < va + max(vsize, rawsize):
+                return rva - va + raw
+        raise ValueError("no section for the icon")
+
+    base = off(rsrc_rva)
+
+    def entries(at):
+        named, ids = struct.unpack_from("<HH", b, base + at + 12)
+        for i in range(named + ids):
+            name, to = struct.unpack_from("<II", b, base + at + 16 + 8 * i)
+            yield name, to
+
+    def leaf(to):  # the first language's data of a type/name subtree
+        while to & 0x80000000:
+            to = next(entries(to & 0x7FFFFFFF))[1]
+        rva, size = struct.unpack_from("<II", b, base + to)
+        return b[off(rva):off(rva) + size]
+
+    types = dict(entries(0))
+    icons = {name: leaf(to) for name, to in entries(types[3] & 0x7FFFFFFF)}
+    group = leaf(next(entries(types[14] & 0x7FFFFFFF))[1])
+    best = max((struct.unpack_from("<BBBBHHIH", group, 6 + 14 * i) for i in range(struct.unpack_from("<H", group, 4)[0])),
+               key=lambda e: (e[0] or 256))
+    img = icons[best[7]]
+    return struct.pack("<HHH", 0, 1, 1) + struct.pack("<BBBBHHII", *best[:6], len(img), 22) + img
+
+
 def setup_version():
     v = json.loads((HERE / "version.json").read_text(encoding="utf-8"))
     return {"version": str(v["version"]), "content": int(v.get("content", 1))}
@@ -455,8 +494,8 @@ class Installer:
             tools = self.tools()
             pack = self.extract(tools)
             jar = self.build_jar(pack)
-            if self.new_profile == "CurseForge":
-                self.profile_icon(pack)
+        if self.new_profile == "CurseForge" or uc_profile("CurseForge") and uc_profile("CurseForge")["mods"] == self.mods:
+            self.profile_icon()
         self.step(0.98, "Cleaning up")
         shutil.rmtree(self.work, ignore_errors=True)
         self.step(1.0, "Done")
@@ -552,22 +591,22 @@ class Installer:
         self.log(f"   {out}  ({out.stat().st_size / 1e6:.1f} MB)")
         return out
 
-    def profile_icon(self, pack):
-        """The CurseForge profile's picture: ULTRAKILL's U rank, made from the player's own files (so it stays on this
-        PC), on black."""
+    def profile_icon(self):
+        """The CurseForge profile's picture: ULTRAKILL's own icon, read from the player's ULTRAKILL.exe (so it stays on this
+        PC). Set on a profile this setup made, and refreshed on one that still has our picture from an earlier setup."""
+        inst = self.mods.parent
+        mi = inst / "minecraftinstance.json"
+        if not (self.game and mi.exists()):
+            return
         try:
-            from PIL import Image
-            rank = Image.open(pack / "assets/ultracraft/textures/uk/ranku.png").convert("RGBA")
-            r = rank.crop(rank.getchannel("A").getbbox())
-            k = 220 / max(r.size)
-            r = r.resize((round(r.width * k), round(r.height * k)), Image.LANCZOS)
-            icon = Image.new("RGBA", (256, 256), (0, 0, 0, 255))
-            icon.alpha_composite(r, ((256 - r.width) // 2, (256 - r.height) // 2))
-            inst = self.mods.parent
-            icon.save(inst / "ultracraft.png")
-            mi = inst / "minecraftinstance.json"
             data = json.loads(mi.read_text(encoding="utf-8"))
-            data["profileImagePath"] = str(inst / "ultracraft.png")
+            pic = inst / "ultracraft.png"
+            if data.get("profileImagePath") not in (None, str(pic)):
+                return  # the player's own picture
+            from PIL import Image
+            import io
+            Image.open(io.BytesIO(exe_icon(self.game / "ULTRAKILL.exe"))).convert("RGBA").save(pic)
+            data["profileImagePath"] = str(pic)
             mi.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception as e:  # noqa: BLE001 - only cosmetic
             self.log(f"   (profile picture skipped: {e})")

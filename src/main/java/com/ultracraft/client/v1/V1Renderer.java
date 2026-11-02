@@ -194,7 +194,7 @@ public final class V1Renderer {
 		int light = e.getPackedLight();
 		// the inventory preview (InventoryScreen.drawEntity) sets bodyYaw / pitch for the pose but not their prev values, so
 		// interpolating there swings the model and gun every tick: use the current values whenever a screen is open
-		boolean gui = client.currentScreen != null;
+		boolean gui = com.ultracraft.client.uk.ViewModel.stopsTime(client.currentScreen);
 		float yaw = gui ? p.bodyYaw : MathHelper.lerp(tickDelta, p.prevBodyYaw, p.bodyYaw);
 		// clash mode slide (PlatformerMovement): the model faces the slide's dodgeDirection, whatever the camera does
 		if (!inGui && local && V1.INSTANCE.sliding && !client.options.getPerspective().isFirstPerson()) {
@@ -375,7 +375,7 @@ public final class V1Renderer {
 		Vector3f hp = head.getTranslation(new Vector3f());
 		float k = (float) (Tune.get("tp.gunScale") * Damage.SCALE_BLOCKS / BASE_SCALE);
 		float td = MinecraftClient.getInstance().getTickDelta();
-		boolean gui = MinecraftClient.getInstance().currentScreen != null;
+		boolean gui = com.ultracraft.client.uk.ViewModel.stopsTime(MinecraftClient.getInstance().currentScreen);
 		float pitch = (float) Math.toRadians((gui ? p.getPitch() : MathHelper.lerp(td, p.prevPitch, p.getPitch())) * Tune.get("tp.aimPitch"));
 		Matrix4f m = new Matrix4f().translation(hp.x + (float) Tune.get("tp.gunX"), hp.y + (float) Tune.get("tp.gunY"), hp.z + (float) Tune.get("tp.gunZ"))
 			.rotateX(pitch)

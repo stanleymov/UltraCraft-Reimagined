@@ -47,8 +47,11 @@ public final class ParryServer {
 
 	private record Pending(MobEntity mob, ServerPlayerEntity target, DamageSource source, float amount, int[] ticks) {}
 	private record Active(ServerPlayerEntity p, int[] ticks) {}
-	/** A Minecraft projectile V1 parried: flies straight on at its parried velocity until it hits something and goes off. */
-	private record Parried(ProjectileEntity pr, ServerPlayerEntity p, Vec3d vel, int[] ticks) {}
+	/**
+	 * A Minecraft projectile V1 parried: flies straight on at its parried velocity until it hits something and goes off.
+	 * `hold`: ticks it still waits after the parry freeze for V1's aim (PARRY_AIM), then goes on as it was sent.
+	 */
+	private record Parried(ProjectileEntity pr, ServerPlayerEntity p, Vec3d[] vel, int[] ticks, int[] hold) {}
 	private static final Map<Integer, Parried> parried = new HashMap<>();
 	/** The parry freeze (TimeController.TrueStop) on the server: the worlds stand still until this nanoTime. */
 	private static volatile long freezeUntil;
@@ -318,6 +321,9 @@ public final class ParryServer {
 	}
 
 	private static void success(ServerPlayerEntity p, Vec3d at, boolean own, boolean shot) {
+		// a dead V1 parries nothing: its punch (or shot) still in flight when the killing hit landed healed it back to full
+		// on the death screen (user, Ender Dragon)
+		if (p.isDead() || p.isRemoved()) return;
 		com.ultracraft.UltraCraft.LOG.info("[parry] PARRY by {} at {}{}", p.getName().getString(), at, own ? " (own shot: no heal)" : shot ? " (shooting parry)" : "");
 		// NewMovement.Parry's full heal only for parrying something hostile, not for boosting your own pellets
 		if (!own) p.setHealth(p.getMaxHealth());
@@ -478,6 +484,32 @@ public final class ParryServer {
 	 * wall, sets off parriedProjectileHitObject (the Explosion prefab). The check runs on the path of the coming tick,
 	 * before vanilla's own collision, so arrows / tridents / potions / fireballs all explode instead of sticking or splashing.
 	 */
+	/** A parried projectile's velocity; fireballs steer by their power vector (like a deflecting sword hit sets it). */
+	private static void send(ProjectileEntity pr, Vec3d v) {
+		pr.setVelocity(v);
+		pr.velocityModified = true;
+		if (pr instanceof ExplosiveProjectileEntity ex) {
+			ex.powerX = v.x * 0.1;
+			ex.powerY = v.y * 0.1;
+			ex.powerZ = v.z * 0.1;
+		}
+	}
+
+	/** PARRY_AIM: the projectiles `p` just parried, still waiting, go at what V1 aims at now, at their parried speed. */
+	public static void reaim(ServerPlayerEntity p, Vec3d eye, Vec3d look) {
+		if (look.lengthSquared() < 1e-6) return;
+		look = look.normalize();
+		for (Parried pa : parried.values()) {
+			if (pa.p() != p || pa.hold()[0] <= 0 || pa.pr().isRemoved()) continue;
+			Vec3d target = WeaponServer.parryLookTarget(p, eye, look);
+			Vec3d dir = target.subtract(pa.pr().getPos());
+			if (dir.lengthSquared() < 1e-6) dir = look;
+			pa.vel()[0] = dir.normalize().multiply(pa.vel()[0].length());
+			pa.hold()[0] = 0;
+			send(pa.pr(), pa.vel()[0]);
+		}
+	}
+
 	private static void tickParried() {
 		for (Iterator<Parried> it = parried.values().iterator(); it.hasNext(); ) {
 			Parried pa = it.next();
@@ -486,9 +518,14 @@ public final class ParryServer {
 			if (--pa.ticks()[0] < 0) { it.remove(); pr.discard(); continue; }
 			if (!(pr.getWorld() instanceof net.minecraft.server.world.ServerWorld world)) { it.remove(); continue; }
 			pr.setNoGravity(true);
-			pr.setVelocity(pa.vel());
+			// held where it was parried until V1's aim after the freeze comes in (a tick or so), then sent there
+			if (pa.hold()[0] > 0) {
+				if (--pa.hold()[0] > 0) { send(pr, Vec3d.ZERO); continue; }
+				send(pr, pa.vel()[0]); // no aim came: on as it was first sent
+			}
+			pr.setVelocity(pa.vel()[0]);
 			pr.velocityModified = true;
-			Vec3d from = pr.getPos(), to = from.add(pa.vel());
+			Vec3d from = pr.getPos(), to = from.add(pa.vel()[0]);
 			double r = ServerTune.get("parry.projRadius", 1.0);
 			Vec3d at = null;
 			double best = Double.MAX_VALUE;
@@ -506,22 +543,22 @@ public final class ParryServer {
 		}
 	}
 
-	/** Punch.ParryProjectile: back where V1 looks, twice the speed (at least 100 u/s), now V1's projectile. */
+	/**
+	 * Punch.ParryProjectile: back where V1 looks, twice the speed (at least 100 u/s), now V1's projectile. Through the
+	 * parry freeze V1 can still turn, and the projectile goes where V1 aims when the freeze ends (user; the game aims it
+	 * once, at the parry): it waits for that aim (reaim) a few ticks at most.
+	 */
 	private static void parryProjectile(ServerPlayerEntity p, ProjectileEntity pr, Vec3d start, Vec3d d) {
 		Vec3d target = WeaponServer.parryLookTarget(p, start, d);
 		double speed = Math.max(pr.getVelocity().length() * 2, 100 * Damage.SCALE_BLOCKS / 20);
 		Vec3d v = target.subtract(pr.getPos()).normalize().multiply(speed);
 		pr.setOwner(p);
-		pr.setVelocity(v);
-		pr.velocityModified = true;
 		pr.setNoGravity(true);
-		parried.put(pr.getId(), new Parried(pr, p, v, new int[] {200}));
-		if (pr instanceof ExplosiveProjectileEntity ex) {
-			// fireballs steer by their power vector (like a deflecting sword hit sets it)
-			ex.powerX = v.x * 0.1;
-			ex.powerY = v.y * 0.1;
-			ex.powerZ = v.z * 0.1;
-		}
+		// (the freeze only comes alone in the world: success)
+		boolean freezes = ServerTune.get("parry.freezeOn", 1) != 0 && p.getServer() != null && p.getServer().getCurrentPlayerCount() <= 1;
+		int hold = freezes ? (int) ServerTune.get("parry.aimWait", 4) : 0;
+		send(pr, hold > 0 ? Vec3d.ZERO : v);
+		parried.put(pr.getId(), new Parried(pr, p, new Vec3d[] {v}, new int[] {200}, new int[] {hold}));
 		if (pr instanceof PersistentProjectileEntity arrow) {
 			arrow.setCritical(true);
 			arrow.pickupType = PersistentProjectileEntity.PickupPermission.ALLOWED;

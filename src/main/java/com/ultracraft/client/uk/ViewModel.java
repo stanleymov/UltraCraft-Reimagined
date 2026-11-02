@@ -74,11 +74,17 @@ public final class ViewModel {
 	/**
 	 * Time stands still for the view model while the game is paused or any screen (inventory, menus) is open, and
 	 * through the parry freeze, like ULTRAKILL's time scale 0 (menus, TimeController.TrueStop): the sway, the weapon
-	 * animations and the effects hold where they are. (The camera shake runs on regardless.)
+	 * animations and the effects hold where they are. (The camera shake runs on regardless.) The chat is no such
+	 * screen: the world runs on behind it, and so does everything of ours (user).
 	 */
 	public static boolean paused() {
 		MinecraftClient c = MinecraftClient.getInstance();
-		return c.isPaused() || c.currentScreen != null || com.ultracraft.client.v1.V1.INSTANCE.frozen();
+		return c.isPaused() || stopsTime(c.currentScreen) || com.ultracraft.client.v1.V1.INSTANCE.frozen();
+	}
+
+	/** A screen that stops our time: any but the chat (the world goes on behind the chat box). */
+	public static boolean stopsTime(net.minecraft.client.gui.screen.Screen s) {
+		return s != null && !(s instanceof net.minecraft.client.gui.screen.ChatScreen);
 	}
 
 	private static double gameSeconds;

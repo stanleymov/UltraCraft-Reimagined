@@ -15,7 +15,11 @@ public final class ShopClient {
 	public static void onOwned(OwnedPayload msg) {
 		owned = msg.masks().length >= WeaponKind.values().length ? msg.masks() : java.util.Arrays.copyOf(msg.masks(), WeaponKind.values().length);
 		// ShopSuccess / ShopFail (sound bubbles: smileOS 2 ok / error)
-		if (msg.result() == 1) { UKSound.play("uk.ui.smileos2ok", 1f, 1f); ShopMode.openDrawer(); }
+		if (msg.result() == 1) {
+			UKSound.play("uk.ui.smileos2ok", 1f, 1f);
+			ShopMode.openDrawer();
+			if (ShopMode.current() != null) ShopScreen.bought((ShopScreen.State) ShopMode.current().screen);
+		}
 		else if (msg.result() == 2) UKSound.play("uk.ui.smileos2error", 1f, 1f);
 	}
 

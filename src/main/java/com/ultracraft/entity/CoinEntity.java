@@ -270,12 +270,16 @@ public class CoinEntity extends Entity {
 			Net.toNear(world, from, new BeamPayload(3, -1, start, g.getPos()));
 			g.superExplode(world, shooter, 1f);
 		} else {
-			// 3. nearest living enemy not yet in this chain, head if it has one
+			// 3. nearest living enemy not yet in this chain, head if it has one; a boss in sight comes before any other
+			// (user: the Ender Dragon, not the Endermen around it, for the revolver's and the railcannon's reflections)
 			LivingEntity target = null;
 			best = Double.MAX_VALUE;
+			boolean bossFound = false;
 			for (LivingEntity e : world.getEntitiesByClass(LivingEntity.class, getBoundingBox().expand(range), e -> e.isAlive() && e != shooter && !(e instanceof ServerPlayerEntity) && !chain.contains(e.getUuid()))) {
+				boolean boss = Damage.isBoss(e);
+				if (bossFound && !boss) continue;
 				double d = e.squaredDistanceTo(this);
-				if (d < best && canSee(world, from, headOf(e))) { best = d; target = e; }
+				if ((d < best || (boss && !bossFound)) && canSee(world, from, headOf(e))) { best = d; target = e; bossFound = boss; }
 			}
 			if (target != null && shooter != null && altBeam != 0) {
 				// SpawnBeam(altBeam): the railcannon shot itself goes on to the target, with its own damage and pierce

@@ -245,6 +245,8 @@ public final class WeaponServer {
 
 	private static void onFire(FirePayload msg, ServerPlayerEntity p) {
 		if (Damage.debug) UltraCraft.LOG.info("[weapons] server fire weapon={} mode={} arg={} from {}", msg.weapon(), msg.mode(), msg.arg(), msg.origin());
+		// a shot or punch that reaches the server after V1 died does nothing (a late punch parried and healed a dead V1)
+		if (p.isDead()) return;
 		// a coin claim carries the hit point (origin) and the coin's position on the client (dir): stored for the
 		// hitscan shot that follows it (Hitscan.fire)
 		if (msg.weapon() == FirePayload.VIEW_HIT) {
@@ -274,6 +276,7 @@ public final class WeaponServer {
 			case FirePayload.STOMP -> stomp(msg, p);
 			case FirePayload.LAVA -> LavaServer.touched(p);
 			case FirePayload.LAVA_BURN -> LavaServer.burn(p);
+			case FirePayload.PARRY_AIM -> ParryServer.reaim(p, msg.origin(), msg.dir());
 			default -> {}
 		}
 	}
