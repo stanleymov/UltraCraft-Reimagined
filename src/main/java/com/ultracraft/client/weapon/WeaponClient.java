@@ -716,18 +716,19 @@ public final class WeaponClient {
 	/**
 	 * The sound of the gore an enemy hit spawns (BloodsplatterManager prefabs' AudioSources): BS Head (HeadBreak2, 0.4)
 	 * for a headshot of 1+ damage or one that kills, BS Body / Body Small (Impacts_SIMPLE_003, 0.5), BS Body Smallest
-	 * (the same, 0.15, pitch 1.5); a kill elsewhere bursts (BS Splatter, HeadBreak2 0.4). Revolver and railcannon beams
+	 * (the same, 0.15); a kill elsewhere bursts (BS Splatter, HeadBreak2 0.4). Revolver and railcannon beams
 	 * add RevolverHit (Melee_Deep_Wound_05 kopio, 0.35, random pitch); a nail or sawblade its enemyHitSound
 	 * (Impacts_SIMPLE_003, 0.2, pitch 0.9..1.1).
 	 */
 	private static void goreSound(HitPayload msg) {
 		boolean kill = msg.kind() == HitPayload.KILL;
 		int gore = msg.gore();
-		if (msg.head() && (gore == 2 || kill)) UKSound.at(msg.pos(), "uk.gore.headbreak2", 0.4f, 1f);
+		// Bloodsplatter.OnEnable: aud.SetPitch(Random.Range(0.75, 1.5)) over the prefab's pitch, so a shotgun's pellets
+		// landing at once don't play one clip in step (in step, 24 of them clipped on the Ender Dragon)
+		if (msg.head() && (gore == 2 || kill)) UKSound.at(msg.pos(), "uk.gore.headbreak2", 0.4f, UKSound.range(0.75f, 1.5f));
 		else {
-			if (gore == 0) UKSound.at(msg.pos(), "uk.impacts.impacts_simple_003", 0.15f, 1.5f);
-			else UKSound.at(msg.pos(), "uk.impacts.impacts_simple_003", 0.5f, 1f);
-			if (kill) UKSound.at(msg.pos(), "uk.gore.headbreak2", 0.4f, 1f);
+			UKSound.at(msg.pos(), "uk.impacts.impacts_simple_003", gore == 0 ? 0.15f : 0.5f, UKSound.range(0.75f, 1.5f));
+			if (kill) UKSound.at(msg.pos(), "uk.gore.headbreak2", 0.4f, UKSound.range(0.75f, 1.5f));
 		}
 		if (msg.hitter() == HitPayload.REVOLVER || msg.hitter() == HitPayload.RAILCANNON)
 			UKSound.at(msg.pos(), "uk.gore.melee_deep_wound_05___kopio", 0.35f, UKSound.range(0.9f, 1.1f));
