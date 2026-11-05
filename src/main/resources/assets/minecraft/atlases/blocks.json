@@ -135,6 +135,10 @@
     {
       "type": "single",
       "resource": "ultracraft:uk/grapple_orb_icon"
+    },
+    {
+      "type": "single",
+      "resource": "ultracraft:uk/basic_color_-_yellow"
     }
   ]
 }

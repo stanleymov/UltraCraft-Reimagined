@@ -95,7 +95,8 @@ public final class Damage {
 		// bosses (BossIdentifier); the railcannon halving on the Wither and the dragon is the user's
 		// (and one weakness each, x1.5, the user's picks: the Warden the revolver and its coins, the Wither the jackhammer
 		// and the revolver, the dragon nails)
-		EntityType.WARDEN, new Profile("warden", 300, true, Map.of(HitPayload.RAILCANNON, 0.5, HitPayload.NAIL, 0.5, HitPayload.SAWBLADE, 0.5, PARRIED_BLAST, 0.1,
+		// (the resistances are the user's after a long beta, not the game's x0.5 railcannon, nails and sawblades)
+		EntityType.WARDEN, new Profile("warden", 300, true, Map.of(HitPayload.RAILCANNON, 0.75, HitPayload.NAIL, 1.0, HitPayload.SAWBLADE, 1.0, PARRIED_BLAST, 0.5,
 			HitPayload.REVOLVER, 1.5, REVOLVER_ALT_FIRE, 1.5, HitPayload.COIN, 1.5)), // Flesh Panopticon
 		// (user: the Wither also takes half from the shotgun's pellets, and all three bosses a tenth from a parried blast's
 		// pellet explosions - twelve pellets each going off for 3.5 took a fifth of the Wither a parry)

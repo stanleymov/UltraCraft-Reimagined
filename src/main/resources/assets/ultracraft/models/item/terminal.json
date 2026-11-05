@@ -2,7 +2,7 @@
   "parent": "builtin/entity",
   "gui_light": "front",
   "textures": {
-    "particle": "ultracraft:uk/t_shopterminal"
+    "particle": "ultracraft:uk/basic_color_-_yellow"
   },
   "display": {
     "gui": {

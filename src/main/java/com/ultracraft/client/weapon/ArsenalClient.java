@@ -121,7 +121,7 @@ public final class ArsenalClient {
 	}
 
 	public void reset() {
-		shoSawCharge = 1; naiAmmo = 100; naiMagnetCharge = 3; naiZapperRecharge = 5; raicharge = 5; railChargePlayed = true;
+		shoSawCharge = 1; naiAmmo = 100; naiSaws = 10; naiMagnetCharge = 3; naiZapperRecharge = 5; raicharge = 5; railChargePlayed = true;
 		rocketcharge = 0; rocketFreezeTime = 5; rocketCannonballCharge = 1; rocketNapalmFuel = 1; rocketFrozen = false;
 		UKSound.stop(CLOCK_TICK);
 		shotgunReady = true; primaryCharge = 0; grenadeForce = 0; charging = false;
@@ -159,6 +159,8 @@ public final class ArsenalClient {
 		// WeaponCharges.Charge: 0.25/s, halved while a chainsaw is still out (shoSawAmount), so juggling still charges
 		if (shoSawCharge < 1) shoSawCharge = Math.min(1, shoSawCharge + (ChainsawFx.anyOut() ? 0.125f : 0.25f) * DT);
 		if (!firingNailgunAmmo) naiAmmo = Math.min(100, naiAmmo + 5 * DT);
+		// saws come back at 0.5/s, never while fire is held (naiAmmoDontCharge)
+		if (!firingNailgunAmmo) naiSaws = Math.min(10, naiSaws + 0.5f * DT);
 		// WeaponCharges.Charge: magnet charges come back at 3/s, up to 3 less the magnets still out
 		int out = magnetsOut();
 		if (out < 3 && naiMagnetCharge < 3 - out && System.nanoTime() - lastMagnetShotNanos > 300_000_000L)
@@ -1137,8 +1139,7 @@ public final class ArsenalClient {
 		boolean fire1 = inputOk && UKKeys.ATTACK.held;
 		boolean fire2Pressed = inputOk && UKKeys.USE.press;
 		float fireRate = 24f;
-		// WeaponCharges.Charge: saws come back at 0.5/s, never while fire is held (naiAmmoDontCharge)
-		if (!fire1) { naiSaws = Math.min(10, naiSaws + 0.5f * DT); sawShotOk = false; }
+		if (!fire1) sawShotOk = false;
 		if (heatSinks > sinkMax(variation, true)) heatSinks = sinkMax(variation, true); // the alt has one heat sink
 		if (burnOut || heatSinks < 1) {
 			heatUp = Math.max(0, heatUp - DT);
