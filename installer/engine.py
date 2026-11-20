@@ -1,5 +1,5 @@
 """UltraCraft Reimagined setup engine: finds ULTRAKILL through Steam, checks it, finds the player's Minecraft Forge 1.20.1 profiles in
-a modding launcher (or makes a new "UltraCraft Reimagined" one in CurseForge / Prism / MultiMC), and builds the mod jar from the
+a modding launcher (or makes a new "UltraCraft Reimagined" one in CurseForge / Modrinth App / Prism / MultiMC), and builds the mod jar from the
 player's own ULTRAKILL files with the bundled tools (setup GUI: setup.pyw).
 
 Package layout (installer/build_package.py makes it):
@@ -133,7 +133,7 @@ def check_ultrakill(path):
 
 
 # ------------------------------------------------------------------------------------- Minecraft profiles
-# UltraCraft Reimagined only ever goes into a modding launcher's profile (CurseForge, Prism Launcher, MultiMC) or a folder the
+# UltraCraft Reimagined only ever goes into a modding launcher's profile (CurseForge, Modrinth App, Prism Launcher, MultiMC) or a folder the
 # player picks - never the Minecraft Launcher.
 
 def appdata():
@@ -165,12 +165,74 @@ def launcher_name(root):
     return "Prism Launcher" if root.name == "PrismLauncher" else "MultiMC"
 
 
+MODRINTH = "Modrinth App"
+
+
+def modrinth_root():
+    """The Modrinth App's data folder (%APPDATA%\\ModrinthApp: app.db and profiles\\<folder>), or None."""
+    r = appdata() / "ModrinthApp"
+    return r if (r / "app.db").exists() or (r / "profiles").exists() else None
+
+
+def modrinth_profiles():
+    """The Modrinth App's profiles: [(name, folder Path, game version, loader)]. Read from a COPY of its app.db (the app
+    keeps it open in WAL mode), never written. The app moved profiles from a `profiles` table to `instances` +
+    `instance_content_sets` in 2026; both layouts are read, and anything unreadable just lists nothing."""
+    root = modrinth_root()
+    if not root or not (root / "app.db").exists():
+        return []
+    import sqlite3
+    import tempfile
+    out = []
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            for suffix in ("", "-wal", "-shm"):
+                src = root / f"app.db{suffix}"
+                if src.exists():
+                    shutil.copy2(src, Path(tmp) / f"app.db{suffix}")
+            db = sqlite3.connect(Path(tmp) / "app.db")
+            try:
+                tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+                if {"instances", "instance_content_sets"} <= tables:
+                    rows = db.execute("SELECT i.name, i.path, s.game_version, s.loader FROM instances i "
+                                      "JOIN instance_content_sets s ON s.id = i.applied_content_set_id").fetchall()
+                elif "profiles" in tables:
+                    rows = db.execute("SELECT name, path, game_version, mod_loader FROM profiles").fetchall()
+                else:
+                    rows = []
+            finally:
+                db.close()
+        except (OSError, sqlite3.Error):
+            return []
+    for name, path, game, loader in rows:
+        folder = Path(path) if Path(path).is_absolute() else root / "profiles" / path
+        out.append((name or Path(path).name, folder, game, str(loader or "").lower()))
+    return out
+
+
+def modrinth_exe():
+    local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
+    for exe in (local / "Modrinth App" / "Modrinth App.exe", local / "Programs" / "Modrinth App" / "Modrinth App.exe",
+                Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Modrinth App" / "Modrinth App.exe"):
+        if exe.exists():
+            return exe
+    return None
+
+
+def modrinth_pack_dir():
+    """Where a new Modrinth profile's jar and .mrpack are built: kept after the setup closes (the app imports the pack
+    when it opens it), replaced by the next setup."""
+    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / f"{NAME} Setup" / "Modrinth"
+
+
 def launchers():
     """The modding launchers on this PC that a new UltraCraft Reimagined profile can be made in."""
     out = []
     if curseforge_installed():
         out.append("CurseForge")
     out += [launcher_name(r) for r in prism_roots()]
+    if modrinth_root():
+        out.append(MODRINTH)
     return out
 
 
@@ -240,6 +302,9 @@ def find_profiles():
                     add(name, launcher_name(r), pack.parent, game)
             except (OSError, ValueError):
                 pass
+    for name, folder, game, loader in modrinth_profiles():
+        if game == MINECRAFT and loader == "forge":
+            add(name, MODRINTH, folder, folder)
     return found
 
 
@@ -255,6 +320,8 @@ def new_profile_mods(launcher):
     if launcher == "CurseForge":
         root = curseforge_instances() or Path.home() / "curseforge/minecraft/Instances"
         return root / PROFILE_NAME / "mods"
+    if launcher == MODRINTH:
+        return modrinth_pack_dir() / "mods"
     root = next((r for r in prism_roots() if launcher_name(r) == launcher), appdata() / "PrismLauncher")
     return root / "instances" / PROFILE_NAME / ".minecraft" / "mods"
 
@@ -386,7 +453,7 @@ class Cancelled(Exception):
 class Installer:
     """Runs the steps in a thread; `on_progress(fraction, step text)` and `on_log(line)` are called from that
     thread (the GUI marshals them). `mods` is the mods folder to put the jar in; with `new_profile` (a launcher name:
-    "CurseForge", "Prism Launcher" or "MultiMC"), the setup first makes (or reuses) the UltraCraft Reimagined profile in that
+    "CurseForge", "Modrinth App", "Prism Launcher" or "MultiMC"), the setup first makes (or reuses) the UltraCraft Reimagined profile in that
     launcher and `mods` is that profile's."""
 
     def __init__(self, game, mods, new_profile, on_progress, on_log):
@@ -399,6 +466,7 @@ class Installer:
         self.cancelled = False
         self.proc = None
         self.log_file = None
+        self.mrpack = None  # a new Modrinth App profile: the .mrpack the app imports (made after the jar)
 
     # -------------------------------------------------- plumbing
     def log(self, line):
@@ -496,6 +564,8 @@ class Installer:
             jar = self.build_jar(pack)
         if self.new_profile == "CurseForge" or uc_profile("CurseForge") and uc_profile("CurseForge")["mods"] == self.mods:
             self.profile_icon()
+        if self.mrpack:
+            self.write_mrpack(jar)
         self.step(0.98, "Cleaning up")
         shutil.rmtree(self.work, ignore_errors=True)
         self.step(1.0, "Done")
@@ -611,6 +681,21 @@ class Installer:
         except Exception as e:  # noqa: BLE001 - only cosmetic
             self.log(f"   (profile picture skipped: {e})")
 
+    def write_mrpack(self, jar):
+        """The new Modrinth App profile as a Modrinth modpack (formatVersion 1): Minecraft 1.20.1 + Forge, and the jar
+        under overrides/mods, which the app copies into the profile's mods folder when it imports the pack. It holds
+        this player's ULTRAKILL files, like the jar: for this PC only."""
+        self.step(0.97, "Making the Modrinth App profile")
+        index = {"formatVersion": 1, "game": "minecraft", "versionId": setup_version()["version"], "name": PROFILE_NAME,
+                 "summary": "ULTRAKILL in Minecraft, built from your own ULTRAKILL. For this PC only: don't share it.",
+                 "files": [], "dependencies": {"minecraft": MINECRAFT, "forge": FORGE}}
+        tmp = self.mrpack.with_suffix(".tmp")
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("modrinth.index.json", json.dumps(index, indent=2))
+            z.write(jar, f"overrides/mods/{Path(jar).name}", compress_type=zipfile.ZIP_STORED)
+        tmp.replace(self.mrpack)
+        self.log(f"   {self.mrpack}  ({self.mrpack.stat().st_size / 1e6:.1f} MB)")
+
     def make_profile(self):
         """The UltraCraft Reimagined profile (Forge 1.20.1) in the chosen modding launcher. The launcher downloads Minecraft and
         Forge itself the first time the profile is played. An existing UltraCraft Reimagined profile is kept as it is."""
@@ -639,6 +724,14 @@ class Installer:
                 "wasGameVersionTypeIdManuallyChanged": False}
             (inst / "minecraftinstance.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
             self.mods = inst / "mods"
+        elif self.new_profile == MODRINTH:
+            # The Modrinth App keeps its profiles in a database it changes often, so the setup doesn't write it: the jar
+            # is built here and handed to the app as a .mrpack, which it imports as a new profile (write_mrpack).
+            self.mods = modrinth_pack_dir() / "mods"
+            self.mods.mkdir(parents=True, exist_ok=True)
+            self.mrpack = modrinth_pack_dir() / f"{NAME}.mrpack"
+            self.log(f"   the jar goes into {self.mrpack.name} for the Modrinth App to import")
+            return
         else:
             r = next((r for r in prism_roots() if launcher_name(r) == self.new_profile), appdata() / "PrismLauncher")
             inst = r / "instances" / PROFILE_NAME

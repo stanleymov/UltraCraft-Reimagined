@@ -167,7 +167,7 @@ def main():
         f"Double-click \"Setup {NAME}.exe\". You need ULTRAKILL (Steam; the base game, no DLC needed) installed and\n"
         f"Minecraft Java Edition. The setup builds the {NAME} mod from YOUR copy of ULTRAKILL - no ULTRAKILL files\n"
         "are included here - and puts it into a Minecraft Forge 1.20.1 profile (yours, or a new one it makes in\n"
-        "CurseForge, Prism Launcher or MultiMC). It needs the internet once, for FMOD (the sound library ULTRAKILL uses).\n\n"
+        "CurseForge, Modrinth App, Prism Launcher or MultiMC). It needs the internet once, for FMOD (the sound library ULTRAKILL uses).\n\n"
         "The jar it builds contains ULTRAKILL's models, art, animations and sounds from your own game: it is for you\n"
         "only. Please don't share it; share this setup instead.\n\n"
         "Command windows may flash while it runs; that is normal.\n", encoding="utf-8")

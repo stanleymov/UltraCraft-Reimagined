@@ -126,8 +126,8 @@ class Wizard(tk.Tk):
         self.text(self.body, (
             "This setup builds the mod on your PC from YOUR OWN copy of ULTRAKILL - no ULTRAKILL files come with the "
             "download. You need ULTRAKILL (Steam; the base game is enough, no DLC) and Minecraft Java Edition. The setup "
-            "puts the finished UltraCraft Reimagined mod into a Forge 1.20.1 profile of your modding launcher (CurseForge, Prism "
-            "Launcher or MultiMC): a new UltraCraft Reimagined profile, or one you already have. It takes a few minutes, needs an "
+            "puts the finished UltraCraft Reimagined mod into a Forge 1.20.1 profile of your modding launcher (CurseForge, "
+            "Modrinth App, Prism Launcher or MultiMC): a new UltraCraft Reimagined profile, or one you already have. It takes a few minutes, needs an "
             "internet connection for one small download (FMOD, the sound library ULTRAKILL uses) and about 2 GB of free "
             "space while it works."), pady=(0, 12))
         warn = ttk.Frame(self.body, style="Panel.TFrame", padding=14)
@@ -216,9 +216,10 @@ class Wizard(tk.Tk):
         e.bind("<FocusIn>", lambda _e: (self.choice.set(OTHER), self.update_note()))
         ttk.Button(row, text="Browse...", command=self.browse_mods).pack(side="left", padx=(8, 0))
         if not self.launchers:
-            self.text(self.body, ("No modding launcher was found on this PC. Install CurseForge (curseforge.com) or Prism "
-                                  "Launcher (prismlauncher.org), start it once, then run this setup again - or choose a "
-                                  "mods folder yourself."), style="Dim.TLabel", pady=(10, 0))
+            self.text(self.body, ("No modding launcher was found on this PC. Install CurseForge (curseforge.com), the "
+                                  "Modrinth App (modrinth.com/app) or Prism Launcher (prismlauncher.org), start it once, "
+                                  "then run this setup again - or choose a mods folder yourself."), style="Dim.TLabel",
+                      pady=(10, 0))
         self.what = self.text(self.body, "", pady=(12, 0))
         self.note = self.text(self.body, "", pady=(4, 0))
         self.note.configure(foreground=GREEN)
@@ -370,6 +371,8 @@ class Wizard(tk.Tk):
         mods, launcher = self.target()
         # An update (an UltraCraft Reimagined jar was already there) gets a shorter last page: no key list.
         self.was_update = bool(mods and Path(mods).exists() and list(Path(mods).glob(f"{engine.JAR_PREFIX}*.jar")))
+        if launcher == engine.MODRINTH and not engine.uc_profile(launcher):
+            self.was_update = False  # (its jar is built in the setup's own folder, which may hold the last one)
         self.installer = engine.Installer(self.game, mods, launcher,
                                           on_progress=lambda f, s: self.after(0, self.progress, f, s),
                                           on_log=lambda line: self.after(0, self.add_log, line))
@@ -389,6 +392,7 @@ class Wizard(tk.Tk):
     def run_install(self):
         try:
             self.jar = self.installer.install()
+            self.mrpack = self.installer.mrpack
             self.after(0, self.finished, None)
         except engine.Cancelled:
             pass
@@ -412,7 +416,13 @@ class Wizard(tk.Tk):
         self.text(self.body, f"Built: {self.jar}", pady=(0, 10))
         mods, launcher = self.target()
         updated = getattr(self, "was_update", False)
-        if launcher and not updated:
+        mrpack = getattr(self, "mrpack", None)
+        if mrpack:
+            how = ("The Modrinth App opens and asks to add the UltraCraft Reimagined profile. It warns that the jar isn't "
+                   "published on Modrinth: that's expected, this setup just built it on your PC from your ULTRAKILL - click "
+                   "'Install anyway'. It then downloads Minecraft and Forge, which takes a minute, and the profile is ready "
+                   "to play. If the app doesn't open, click 'Add it to the Modrinth App' below.")
+        elif launcher and not updated:
             how = (f"Open {launcher} (restart it if it was already open) and play the UltraCraft Reimagined profile. The first "
                    "start downloads Minecraft and Forge, which takes a minute.")
         elif launcher:
@@ -437,6 +447,22 @@ class Wizard(tk.Tk):
                 self.destroy()  # the setup is done: CurseForge takes over
 
             ttk.Button(row, text="Open CurseForge", style="Accent.TButton", command=open_curseforge).pack(side="left", padx=(0, 8))
+        if mrpack:
+            def add_to_modrinth():
+                try:
+                    os.startfile(str(mrpack))  # the Modrinth App opens .mrpack files and imports them as a profile
+                except OSError:
+                    messagebox.showinfo("UltraCraft Reimagined Setup", (
+                        "Windows has no app for .mrpack files: open the Modrinth App, click New instance > "
+                        f"Upload a modpack, and pick:\n\n{mrpack}"))
+
+            ttk.Button(row, text="Add it to the Modrinth App", style="Accent.TButton",
+                       command=add_to_modrinth).pack(side="left", padx=(0, 8))
+            self.after(600, add_to_modrinth)
+        elif launcher == engine.MODRINTH or (p and p["launcher"] == engine.MODRINTH):
+            if engine.modrinth_exe():
+                ttk.Button(row, text="Open the Modrinth App", style="Accent.TButton",
+                           command=lambda: os.startfile(str(engine.modrinth_exe()))).pack(side="left", padx=(0, 8))
         ttk.Button(row, text="Open the mods folder", command=lambda: os.startfile(str(Path(self.jar).parent))).pack(side="left")
         self.back_btn.state(["disabled"])
         self.next_btn.configure(text="Finish")

@@ -522,30 +522,78 @@ EMBEDDED_SOUNDS = [("Assets/Prefabs/Weapons/Railcannon Malicious.prefab", "Throa
                    ("Assets/Prefabs/Levels/Shop.prefab", "125064__everydaysounds__faulty-fluorescent-light-starter-hum", "Shop/lighthum")]
 
 
+def scan_embedded(jobs):
+    """Finds embedded assets by opening their prefabs' bundles ONE AT A TIME.
+
+    jobs: (prefab key, Unity type name, object name, handler(obj)); each job's handler runs on the first object of
+    that type and name. Loading every dependency of a prefab at once took 6.5 GB, and old environments lingered
+    (11 GB peak: MemoryError on a player's PC, GitHub issue 1), so each bundle is read alone and freed before the
+    next, and the scan stops once every job is done. Returns the jobs that found nothing.
+    """
+    import gc
+
+    import UnityPy
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import ukenv
+    cat = ukenv.catalog()
+    pending = list(jobs)
+    bundles, primary = [], set()
+    for key in dict.fromkeys(j[0] for j in pending):
+        for e in [e for e in cat.entries if key in e.keys]:
+            for i, b in enumerate(cat.bundle_entries(e)):
+                p = cat.bundle_path(b)
+                if not p:
+                    continue
+                if i == 0:
+                    primary.add(p)
+                if p not in bundles:
+                    bundles.append(p)
+    # likeliest first (sounds.bundle for clips, textures.bundle for textures, then the prefabs' own bundle), small before big
+    hints = {"AudioClip": "sound", "Texture2D": "texture"}
+
+    def rank(p):
+        name = os.path.basename(p).lower()
+        hinted = any(h in name for h in {hints.get(j[1], "\0") for j in pending})
+        return (0 if hinted else 1 if p in primary else 2, os.path.getsize(p))
+
+    for p in sorted(bundles, key=rank):
+        if not pending:
+            break
+        types = {j[1] for j in pending}
+        env = UnityPy.load(p)
+        for o in env.objects:
+            if not pending:
+                break
+            if o.type.name not in types:
+                continue
+            try:
+                name = o.peek_name()
+            except Exception:
+                name = getattr(o.read(), "m_Name", "")
+            for j in [j for j in pending if j[1] == o.type.name and j[2] == name]:
+                j[3](o)
+                pending.remove(j)
+        del env
+        gc.collect()
+    return pending
+
+
 def export_embedded_sounds():
     """Each EMBEDDED_SOUNDS clip as WORK/sounds/Assets/Sounds/<path>.ogg, where layout() picks the sounds up."""
     try:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import ukenv
+        import UnityPy  # noqa: F401
     except ImportError as e:
         print("embedded sounds not exported:", e)
         return
     ffmpeg = FFMPEG
-    for key, name, rel in EMBEDDED_SOUNDS:
-        ogg = os.path.join(WORK, "sounds", "Assets", "Sounds", rel + ".ogg")
-        if os.path.exists(ogg):
-            continue
-        env, _ = ukenv.env_for_key(key)
-        for o in env.objects:
-            if o.type.name != "AudioClip":
-                continue
-            clip = o.read()
-            if getattr(clip, "m_Name", "") != name:
-                continue
-            samples = clip.samples
+
+    def handler(name, rel, ogg):
+        def run(o):
+            samples = o.read().samples
             if not samples or not ffmpeg:
                 print("embedded sound", name, "not converted (samples or ffmpeg missing)")
-                break
+                return
             os.makedirs(os.path.dirname(ogg), exist_ok=True)
             wav = ogg[:-4] + ".wav"
             with open(wav, "wb") as f:
@@ -553,7 +601,15 @@ def export_embedded_sounds():
             subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis", "-q:a", "5", ogg], check=True)
             os.remove(wav)
             print("embedded sound", name, "->", rel)
-            break
+        return run
+
+    jobs = []
+    for key, name, rel in EMBEDDED_SOUNDS:
+        ogg = os.path.join(WORK, "sounds", "Assets", "Sounds", rel + ".ogg")
+        if not os.path.exists(ogg):
+            jobs.append((key, "AudioClip", name, handler(name, rel, ogg)))
+    for j in scan_embedded(jobs):
+        print("embedded sound not found:", j[2])
 
 
 # Textures with no addressable key of their own, read from a prefab that uses them: (prefab key, texture name, output stem)
@@ -604,28 +660,25 @@ def bake_tinted():
 def export_embedded_textures():
     """Each EMBEDDED_TEXTURES texture as textures/uk/<stem>.png."""
     try:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import ukenv
+        import UnityPy  # noqa: F401
     except ImportError as e:
         print("embedded textures not exported:", e)
         return
     tex_dst = os.path.join(RES, "textures", "uk")
+
+    def handler(name, stem, out):
+        def run(o):
+            o.read().image.save(out)
+            print("embedded texture", name, "->", stem)
+        return run
+
+    jobs = []
     for key, name, stem in EMBEDDED_TEXTURES:
         out = os.path.join(tex_dst, stem + ".png")
-        if os.path.exists(out):
-            continue
-        env, _ = ukenv.env_for_key(key)
-        for o in env.objects:
-            if o.type.name != "Texture2D":
-                continue
-            t = o.read()
-            if getattr(t, "m_Name", "") != name:
-                continue
-            t.image.save(out)
-            print("embedded texture", name, "->", stem)
-            break
-        else:
-            print("embedded texture not found:", name)
+        if not os.path.exists(out):
+            jobs.append((key, "Texture2D", name, handler(name, stem, out)))
+    for j in scan_embedded(jobs):
+        print("embedded texture not found:", j[2])
 
 
 # Texture2DArrays (their pixels are streamed from the bundle's .resS): (a prefab that loads them, array name, output stem)
@@ -636,33 +689,30 @@ def export_texture_arrays():
     """Each slice of a Texture2DArray as <stem><n>.png (R8G8B8A8, rows bottom-up per slice)."""
     try:
         from PIL import Image
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import ukenv
         from UnityPy.helpers.ResourceReader import get_resource_data
     except ImportError as e:
         print("texture arrays not exported:", e)
         return
     tex_dst = os.path.join(RES, "textures", "uk")
-    for key, name, stem in TEXTURE_ARRAYS:
-        env, _ = ukenv.env_for_key(key)
-        for o in env.objects:
-            if o.type.name != "Texture2DArray":
-                continue
+
+    def handler(name, stem):
+        def run(o):
             d = o.read()
-            if getattr(d, "m_Name", "") != name:
-                continue
             w, h, depth = d.m_Width, d.m_Height, d.m_Depth
             sd = d.m_StreamData
             data = get_resource_data(sd.path, o.assets_file, sd.offset, sd.size) if sd.size else bytes(d.image_data)
             per = w * h * 4
             if len(data) < per * depth:
                 print("texture array", name, "has an unexpected size", len(data))
-                break
+                return
             for i in range(depth):
                 im = Image.frombytes("RGBA", (w, h), bytes(data[i * per:(i + 1) * per])).transpose(Image.FLIP_TOP_BOTTOM)
                 im.save(os.path.join(tex_dst, f"{stem}{i}.png"))
             print("texture array", name, "->", depth, "frames")
-            break
+        return run
+
+    for j in scan_embedded([(key, "Texture2DArray", name, handler(name, stem)) for key, name, stem in TEXTURE_ARRAYS]):
+        print("texture array not found:", j[2])
 
 
 def bake_fire():

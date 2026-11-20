@@ -85,12 +85,12 @@ Press **F5** for third person view and V1 plays like ULTRAKILL's **Clash Mode**:
 ## Installing
 
 You need **ULTRAKILL** (Steam; the base game, no DLC needed), **Minecraft Java Edition** and a modding launcher:
-**CurseForge**, **Prism Launcher** or **MultiMC**.
+**CurseForge**, **Modrinth App**, **Prism Launcher** or **MultiMC**.
 
 1. Download `UltraCraft Reimagined Setup <version>.zip` from Releases and extract the whole zip.
 2. Close CurseForge if it is open.
 3. Run `Setup UltraCraft Reimagined.exe`. It finds ULTRAKILL in your Steam libraries and your Forge 1.20.1 profiles,
-   then lets you pick: a new **UltraCraft Reimagined** profile (CurseForge, Prism Launcher or MultiMC), one of your
+   then lets you pick: a new **UltraCraft Reimagined** profile (CurseForge, Modrinth App, Prism Launcher or MultiMC), one of your
    own Forge 1.20.1 profiles, or any mods folder.
 4. It builds the mod from your ULTRAKILL in a few minutes (command windows may flash; that's normal) and puts the jar
    in that profile. Play it from your launcher: a new profile downloads Minecraft and Forge the first time.
