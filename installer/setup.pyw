@@ -53,6 +53,9 @@ class Wizard(tk.Tk):
         style.configure("TRadiobutton", background=PANEL, foreground=FG, font=BODY_FONT, indicatorcolor=PANEL)
         style.map("TRadiobutton", background=[("active", PANEL)], indicatorcolor=[("selected", ACCENT)],
                   foreground=[("disabled", "#666a72")])
+        style.configure("Vertical.TScrollbar", background="#3b4049", troughcolor=PANEL, bordercolor=PANEL,
+                        arrowcolor=FG, lightcolor="#3b4049", darkcolor="#3b4049")
+        style.map("Vertical.TScrollbar", background=[("active", "#4a4f59")])
         style.configure("red.Horizontal.TProgressbar", troughcolor=PANEL, background=ACCENT, bordercolor=PANEL,
                         lightcolor=ACCENT, darkcolor=ACCENT)
 
@@ -65,10 +68,11 @@ class Wizard(tk.Tk):
         self.installer = None
         self.jar = None
 
-        self.body = ttk.Frame(self, padding=(28, 22, 28, 8))
-        self.body.pack(fill="both", expand=True)
+        # the button bar is packed first, so a long page can never push Back / Next / Cancel out of the window
         bar = ttk.Frame(self, padding=(28, 8, 28, 18))
         bar.pack(fill="x", side="bottom")
+        self.body = ttk.Frame(self, padding=(28, 22, 28, 8))
+        self.body.pack(fill="both", expand=True)
         self.back_btn = ttk.Button(bar, text="< Back", command=self.back)
         self.next_btn = ttk.Button(bar, text="Next >", style="Accent.TButton", command=self.next)
         self.cancel_btn = ttk.Button(bar, text="Cancel", command=self.cancel)
@@ -112,6 +116,38 @@ class Wizard(tk.Tk):
                 return
             self.installer.cancel()
         self.destroy()
+
+    def scroll_list(self, parent, max_height):
+        """A frame to pack rows into that scrolls (scroll bar and mouse wheel) once its rows are taller than
+        max_height; call .finish() on it after the last row."""
+        holder = ttk.Frame(parent, style="Panel.TFrame")
+        holder.pack(fill="x")
+        canvas = tk.Canvas(holder, bg=PANEL, highlightthickness=0, bd=0, height=1)
+        bar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=bar.set)
+        inner = ttk.Frame(canvas, style="Panel.TFrame")
+        win = canvas.create_window((0, 0), window=inner, anchor="nw")
+        canvas.pack(side="left", fill="x", expand=True)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(win, width=e.width))
+
+        def wheel(e):
+            canvas.yview_scroll(int(-e.delta / 120), "units")
+
+        def finish():
+            inner.update_idletasks()
+            need = inner.winfo_reqheight()
+            rows = inner.winfo_children()
+            row_h = max(1, round(need / len(rows))) if rows else 24  # rows are all the same height
+            shown = min(need, max(row_h, max_height // row_h * row_h))  # whole rows only, and it scrolls a row a step
+            canvas.configure(height=shown, scrollregion=(0, 0, 0, need), yscrollincrement=row_h)
+            if need > max_height:
+                bar.pack(side="right", fill="y", padx=(8, 0))
+                # the wheel scrolls the list while the pointer is over it (bound on the canvas and every row)
+                for w in [canvas, inner] + inner.winfo_children():
+                    w.bind("<MouseWheel>", wheel)
+
+        inner.finish = finish
+        return inner
 
     def text(self, parent, s, style="TLabel", wrap=700, **kw):
         lab = ttk.Label(parent, text=s, style=style, wraplength=wrap, justify="left")
@@ -195,20 +231,24 @@ class Wizard(tk.Tk):
         ttk.Label(self.body, text="Where should UltraCraft Reimagined go?", style="Title.TLabel").pack(anchor="w", pady=(0, 12))
         box = ttk.Frame(self.body, style="Panel.TFrame", padding=14)
         box.pack(fill="x")
+        # the launchers' profiles scroll inside the panel (players with dozens of CurseForge profiles, GitHub issue);
+        # "Choose another location" stays below them, always visible
+        lst = self.scroll_list(box, max_height=270)
         # 1. an UltraCraft Reimagined profile in each modding launcher on this PC (made new, or updated)
         for launcher in self.launchers:
             verb = "Update" if engine.uc_profile(launcher) else "Create"
-            ttk.Radiobutton(box, text=f"{verb} UltraCraft Reimagined ({launcher})", value=NEW + launcher, variable=self.choice,
+            ttk.Radiobutton(lst, text=f"{verb} UltraCraft Reimagined ({launcher})", value=NEW + launcher, variable=self.choice,
                             command=self.update_note).pack(anchor="w", pady=(2, 2))
         # 2. the player's own Forge 1.20.1 profiles
         for p in self.profiles:
             if p["name"] == engine.PROFILE_NAME:
                 continue
-            ttk.Radiobutton(box, text=f"Use {p['name']} ({p['launcher']})", value=str(p["mods"]), variable=self.choice,
+            ttk.Radiobutton(lst, text=f"Use {p['name']} ({p['launcher']})", value=str(p["mods"]), variable=self.choice,
                             command=self.update_note).pack(anchor="w", pady=(2, 2))
+        lst.finish()
         # 3. anywhere else
         row = ttk.Frame(box, style="Panel.TFrame")
-        row.pack(fill="x", pady=(2, 0))
+        row.pack(fill="x", pady=(6, 0))
         ttk.Radiobutton(row, text="Choose another location", value=OTHER, variable=self.choice,
                         command=self.update_note).pack(side="left")
         e = tk.Entry(row, textvariable=self.other, font=BODY_FONT, bg=BG, fg=FG, insertbackground=FG, relief="flat")
